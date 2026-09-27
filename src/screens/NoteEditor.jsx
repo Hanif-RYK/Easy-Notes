@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react";
-import { flushSync } from "react-dom";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowLeft, Check, MoreHorizontal, Pin, PinOff, Printer, Share2, Trash2 } from "lucide-react";
+import { navigate } from "../hooks/useHashRoute.js";
 import { goBack } from "../hooks/useHashRoute.js";
-import { ActionSheet, ConfirmDialog } from "../components/Modal.jsx";
+import { ActionSheet } from "../components/Modal.jsx";
 import { useToast } from "../components/Toast.jsx";
 import { formatDate } from "../lib/format.js";
 
@@ -10,12 +10,28 @@ import { formatDate } from "../lib/format.js";
 // so typing never waits for storage.
 const AUTOSAVE_DELAY = 1000;
 
-export function NoteEditor({ id, note, actions }) {
+export function NoteEditor({ id, note, gone, actions }) {
+  // The note was moved to the Trash (e.g. reached with the back button).
+  if (gone) {
+    return (
+      <main className="flex min-h-dvh flex-col items-center justify-center px-6 text-center">
+        <Trash2 className="h-8 w-8 text-slate-400" />
+        <h1 className="mt-4 text-base font-semibold text-slate-900 dark:text-white">This note is in the Trash</h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">You can restore it from Settings → Trash.</p>
+        <button type="button" onClick={() => navigate("trash", { replace: true })} className="btn-secondary mt-5">
+          Open Trash
+        </button>
+      </main>
+    );
+  }
+  return <Editor id={id} note={note} actions={actions} />;
+}
+
+function Editor({ id, note, actions }) {
   const toast = useToast();
   const [title, setTitle] = useState(note?.title ?? "");
   const [body, setBody] = useState(note?.body ?? "");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const isNew = !note;
   const isEmpty = !title.trim() && !body.trim();
@@ -23,7 +39,9 @@ export function NoteEditor({ id, note, actions }) {
 
   // Latest draft, used when the editor closes.
   const draft = useRef({ id, title, body });
-  draft.current = { id, title, body };
+  useLayoutEffect(() => {
+    draft.current = { id, title, body };
+  }, [id, title, body]);
   const deleted = useRef(false);
   const bodyRef = useRef(null);
 
@@ -41,19 +59,8 @@ export function NoteEditor({ id, note, actions }) {
     };
   }, [actions]);
 
-  // Save right away if the app is closed or moved to the background.
-  useEffect(() => {
-    const flush = () => {
-      if (!deleted.current) flushSync(() => actions.saveNote(draft.current));
-    };
-    const onVisibility = () => document.visibilityState === "hidden" && flush();
-    window.addEventListener("pagehide", flush);
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => {
-      window.removeEventListener("pagehide", flush);
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-  }, [actions]);
+  // Let the app save the text still being typed if it is closed or hidden.
+  useEffect(() => actions.registerDraft(() => (deleted.current ? null : draft.current)), [actions]);
 
   const share = async () => {
     const text = [title.trim(), body.trim()].filter(Boolean).join("\n\n");
@@ -70,10 +77,11 @@ export function NoteEditor({ id, note, actions }) {
     }
   };
 
-  const remove = () => {
+  const moveToTrash = () => {
     deleted.current = true;
-    actions.removeNote(id);
-    toast("Note deleted");
+    if (isEmpty && isNew) return goBack(); // nothing to keep
+    actions.saveNote(draft.current); // make sure the latest text is in the Trash too
+    actions.trashItem("note", id);
     goBack();
   };
 
@@ -109,6 +117,9 @@ export function NoteEditor({ id, note, actions }) {
             )}
             <button type="button" onClick={() => setMenuOpen(true)} className="icon-btn" aria-label="More options">
               <MoreHorizontal className="h-5 w-5" />
+            </button>
+            <button type="button" onClick={() => goBack()} className="btn-primary ml-1 h-9 rounded-full px-4">
+              Done
             </button>
           </div>
         </header>
@@ -165,21 +176,8 @@ export function NoteEditor({ id, note, actions }) {
             : []),
           { label: "Share", icon: Share2, onClick: share },
           { label: "Print / Save as PDF", icon: Printer, onClick: () => setTimeout(() => window.print(), 250) },
-          {
-            label: "Delete",
-            icon: Trash2,
-            danger: true,
-            onClick: () => (isNew && isEmpty ? goBack() : setConfirmDelete(true)),
-          },
+          { label: "Move to Trash", icon: Trash2, danger: true, onClick: moveToTrash },
         ]}
-      />
-
-      <ConfirmDialog
-        open={confirmDelete}
-        onClose={() => setConfirmDelete(false)}
-        onConfirm={remove}
-        title="Delete this note?"
-        message={`"${title.trim() || "Untitled"}" will be permanently deleted.`}
       />
     </>
   );

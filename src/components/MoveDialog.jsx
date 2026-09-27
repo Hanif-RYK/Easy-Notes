@@ -7,13 +7,13 @@ import { descendantIds, folderTree } from "../lib/folders.js";
  * kind is "note", "doc" or "folder". A folder can't be moved into itself or
  * into one of its own sub-folders, so those are hidden.
  */
-export function MoveDialog({ target, folders, folderKind, onClose, onMove }) {
+export function MoveDialog({ target, folders, onClose, onMove }) {
   if (!target) return <Modal open={false} onClose={onClose} />;
 
   const { kind, item } = target;
   const current = kind === "folder" ? (item.parentId ?? null) : (item.folderId ?? null);
   const blocked = kind === "folder" ? descendantIds(folders, item.id) : new Set();
-  const options = folderTree(folders, folderKind).filter(({ folder }) => !blocked.has(folder.id));
+  const options = folderTree(folders).filter(({ folder }) => !blocked.has(folder.id));
 
   const choose = (folderId) => {
     onClose();
@@ -30,7 +30,7 @@ export function MoveDialog({ target, folders, folderKind, onClose, onMove }) {
         {kind === "folder" && (
           <button type="button" onClick={() => choose(null)} className={rowClass}>
             <HomeIcon className="h-5 w-5 shrink-0 text-slate-400" />
-            <span className="flex-1">{folderKind === "doc" ? "Documents" : "Notes"} (top level)</span>
+            <span className="flex-1">Top level</span>
             {current === null && <Check className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />}
           </button>
         )}

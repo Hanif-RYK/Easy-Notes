@@ -14,9 +14,10 @@ import {
   Trash2,
 } from "lucide-react";
 import { goBack } from "../hooks/useHashRoute.js";
-import { ActionSheet, ConfirmDialog, PromptDialog } from "../components/Modal.jsx";
+import { ActionSheet, PromptDialog } from "../components/Modal.jsx";
 import { useToast } from "../components/Toast.jsx";
-import { getFile } from "../lib/fileStore.js";
+import { getFile } from "../lib/db.js";
+import { PdfPreview } from "../components/PdfPreview.jsx";
 import { formatDate, formatSize, isImage, isPdf } from "../lib/format.js";
 
 export function DocViewer({ doc, actions }) {
@@ -24,7 +25,7 @@ export function DocViewer({ doc, actions }) {
   const [file, setFile] = useState({ status: "loading", url: null, blob: null });
   const [menuOpen, setMenuOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [pdfFailed, setPdfFailed] = useState(false);
 
   const docId = doc?.id;
 
@@ -78,9 +79,8 @@ export function DocViewer({ doc, actions }) {
     }
   };
 
-  const remove = () => {
-    actions.removeDoc(doc.id);
-    toast("Document deleted");
+  const moveToTrash = () => {
+    actions.trashItem("doc", doc.id);
     goBack("docs");
   };
 
@@ -126,13 +126,16 @@ export function DocViewer({ doc, actions }) {
         </div>
       )}
 
-      {file.status === "ready" && isPdf(doc.type) && (
-        // Mobile browsers often can't show PDFs inline; the fallback offers to open it instead.
-        <object data={file.url} type="application/pdf" className="w-full flex-1" aria-label={doc.name}>
-          <Message
+      {file.status === "ready" && isPdf(doc.type) && !pdfFailed && (
+        <PdfPreview blob={file.blob} onError={() => setPdfFailed(true)} />
+      )}
+
+      {file.status === "ready" && isPdf(doc.type) && pdfFailed && (
+        // The PDF couldn't be drawn (e.g. damaged or protected); offer to open it instead.
+        <Message
             icon={FileText}
             title={doc.name}
-            text="Preview isn't available in this browser."
+          text="This PDF can't be previewed here."
             action={
               <div className="mt-5 flex gap-3">
                 <a href={file.url} target="_blank" rel="noopener noreferrer" className="btn-primary">
@@ -145,8 +148,7 @@ export function DocViewer({ doc, actions }) {
                 </button>
               </div>
             }
-          />
-        </object>
+        />
       )}
 
       <ActionSheet
@@ -166,7 +168,7 @@ export function DocViewer({ doc, actions }) {
                 { label: "Download", icon: Download, onClick: download },
               ]
             : []),
-          { label: "Delete", icon: Trash2, danger: true, onClick: () => setConfirmDelete(true) },
+          { label: "Move to Trash", icon: Trash2, danger: true, onClick: moveToTrash },
         ]}
       />
 
@@ -179,13 +181,6 @@ export function DocViewer({ doc, actions }) {
         onSubmit={(name) => actions.renameDoc(doc.id, name)}
       />
 
-      <ConfirmDialog
-        open={confirmDelete}
-        onClose={() => setConfirmDelete(false)}
-        onConfirm={remove}
-        title="Delete this document?"
-        message={`"${doc.name}" will be permanently deleted.`}
-      />
     </Shell>
   );
 }

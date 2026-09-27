@@ -1,49 +1,43 @@
-import { useState } from "react";
-import { Lock } from "lucide-react";
+import { FileText, FolderPlus, Lock } from "lucide-react";
 import { Logo } from "../components/Logo.jsx";
 
-export function Welcome({ onStart }) {
-  const [name, setName] = useState("");
+const STEPS = [
+  { icon: FolderPlus, text: "Create a folder" },
+  { icon: FileText, text: "Write notes or add PDFs and photos inside it" },
+  { icon: Lock, text: "Everything stays private on this device" },
+];
 
+export function Welcome({ onStart }) {
   return (
     <main className="flex min-h-dvh items-center justify-center px-6 py-10">
-      <form
-        className="animate-pop-in w-full max-w-sm text-center"
-        onSubmit={(e) => {
-          e.preventDefault();
-          onStart(name.trim());
-        }}
-      >
+      <div className="animate-pop-in w-full max-w-sm text-center">
         <Logo className="mx-auto h-16 w-16" />
         <h1 className="mt-6 text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Easy Notes</h1>
         <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-          Your notes and documents, simply organised in one place.
+          Your notes and documents, simply organised in folders.
         </p>
 
-        <div className="mt-8 text-left">
-          <label htmlFor="welcome-name" className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
-            What should we call you? <span className="text-slate-400">(optional)</span>
-          </label>
-          <input
-            id="welcome-name"
-            className="input h-12"
-            placeholder="Your name"
-            autoComplete="given-name"
-            maxLength={40}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-        </div>
+        <ol className="mt-8 space-y-3 text-left">
+          {STEPS.map(({ icon: Icon, text }, i) => (
+            <li
+              key={text}
+              className="flex items-center gap-3 rounded-2xl border border-slate-200/70 bg-white p-3.5 dark:border-slate-800 dark:bg-slate-900"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300">
+                <Icon className="h-5 w-5" />
+              </span>
+              <span className="text-sm text-slate-700 dark:text-slate-200">
+                <span className="sr-only">Step {i + 1}: </span>
+                {text}
+              </span>
+            </li>
+          ))}
+        </ol>
 
-        <button type="submit" className="btn-primary mt-4 h-12 w-full">
+        <button type="button" onClick={onStart} className="btn-primary mt-8 h-12 w-full">
           Get started
         </button>
-
-        <p className="mt-6 flex items-center justify-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
-          <Lock className="h-3.5 w-3.5" />
-          Everything is saved privately on this device.
-        </p>
-      </form>
+      </div>
     </main>
   );
 }
