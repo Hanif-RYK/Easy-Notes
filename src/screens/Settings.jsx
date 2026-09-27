@@ -29,7 +29,6 @@ export function Settings({ data, trashCount, theme, lastBackup, actions }) {
   const restoreInput = useRef(null);
   const [busy, setBusy] = useState(false);
   const [restoring, setRestoring] = useState(null); // { summary, apply }
-  const [confirmReset, setConfirmReset] = useState(false);
   const [storage, setStorage] = useState({ usage: null, persisted: false });
   const [installable, setInstallable] = useState(canInstall);
 
@@ -209,19 +208,6 @@ export function Settings({ data, trashCount, theme, lastBackup, actions }) {
           </div>
         </section>
 
-        {/* Danger zone */}
-        <section>
-          <div className={card}>
-            <button
-              type="button"
-              onClick={() => setConfirmReset(true)}
-              className={`${row} font-medium text-rose-600 transition hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10`}
-            >
-              <Trash2 className="h-5 w-5" />
-              Delete all data
-            </button>
-          </div>
-        </section>
       </main>
 
       <ConfirmDialog
@@ -238,14 +224,6 @@ export function Settings({ data, trashCount, theme, lastBackup, actions }) {
         onConfirm={() => restoring.apply()}
       />
 
-      <ConfirmDialog
-        open={confirmReset}
-        onClose={() => setConfirmReset(false)}
-        title="Delete all data?"
-        message="All folders, notes, documents and the Trash on this device will be permanently removed. Download a backup first if you might need them."
-        confirmLabel="Delete everything"
-        onConfirm={actions.resetApp}
-      />
     </div>
   );
 }

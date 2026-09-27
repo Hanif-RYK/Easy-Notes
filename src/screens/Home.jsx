@@ -72,7 +72,7 @@ export function Home({ tab, folder, notes, docs, folders, lastBackup, actions })
   const searching = q.length > 0;
   const filtersActive = sort !== "recent" || (!isNotes && docFilter !== "all");
 
-  const tabFolders = folders; // folders are shared by notes and documents
+  const tabFolders = useMemo(() => folders.filter((f) => f.kind === kind), [folders, kind]); // each tab has its own folders
   const allItems = isNotes ? notes : docs;
   const folderName = useMemo(() => new Map(tabFolders.map((f) => [f.id, f.name])), [tabFolders]);
   const path = useMemo(() => folderPath(tabFolders, folderId), [tabFolders, folderId]);
@@ -244,7 +244,7 @@ export function Home({ tab, folder, notes, docs, folders, lastBackup, actions })
   }[prompt?.type ?? "newFolder"];
 
   const submitPrompt = (value) => {
-    if (prompt.type === "newFolder") actions.createFolder(value, folderId);
+    if (prompt.type === "newFolder") actions.createFolder(kind, value, folderId);
     else if (prompt.type === "renameFolder") actions.renameFolder(prompt.item.id, value);
     else actions.renameDoc(prompt.item.id, value);
   };
@@ -252,7 +252,7 @@ export function Home({ tab, folder, notes, docs, folders, lastBackup, actions })
   /** Moves an item to the Trash (the toast offers Undo). */
   const trash = ({ kind: k, item }) => {
     // If the open folder (or one of its parents) is trashed, go back to where it was.
-    if (k === "folder" && folderId && descendantIds(folders, item.id).has(folderId)) {
+    if (k === "folder" && folderId && descendantIds(tabFolders, item.id).has(folderId)) {
       navigate(item.parentId ? `${tab}/${item.parentId}` : tab, { replace: true });
     }
     actions.trashItem(k, item.id);
@@ -510,7 +510,7 @@ export function Home({ tab, folder, notes, docs, folders, lastBackup, actions })
 
       <MoveDialog
         target={moving}
-        folders={folders}
+        folders={tabFolders}
         onClose={() => setMoving(null)}
         onMove={(targetId) => actions.moveItem(moving.kind, moving.item.id, targetId)}
       />

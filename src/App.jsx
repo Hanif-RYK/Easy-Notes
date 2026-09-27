@@ -6,7 +6,6 @@ import { deleteFile, getFile, putFile, setBlockedHandler } from "./lib/db.js";
 import { descendantIds, placeInFolders } from "./lib/folders.js";
 import { createSaver } from "./lib/persistence.js";
 import {
-  clearAppData,
   createId,
   loadData,
   loadLastBackup,
@@ -194,8 +193,8 @@ export default function App() {
 
   // ---- Folders -----------------------------------------------------------
   const createFolder = useCallback(
-    (name, parentId = null) => {
-      const folder = { id: createId(), name, parentId, createdAt: Date.now() };
+    (kind, name, parentId = null) => {
+      const folder = { id: createId(), name, kind, parentId, createdAt: Date.now() };
       setData((prev) => ({ ...prev, folders: [...prev.folders, folder] }));
       toast("Folder created");
     },
@@ -210,12 +209,17 @@ export default function App() {
   const moveItem = useCallback(
     (kind, id, targetId) => {
       setData((prev) => {
+        const target = targetId ? prev.folders.find((f) => f.id === targetId) : null;
+        if (targetId && !target) return prev;
         if (kind === "folder") {
-          // A folder can't be moved into itself or one of its own sub-folders.
+          // A folder can't be moved into itself or one of its own sub-folders,
+          // nor between the Notes and Documents tabs.
           if (targetId && descendantIds(prev.folders, id).has(targetId)) return prev;
+          const folder = prev.folders.find((f) => f.id === id);
+          if (target && folder && target.kind !== folder.kind) return prev;
           return { ...prev, folders: prev.folders.map((f) => (f.id === id ? { ...f, parentId: targetId } : f)) };
         }
-        if (!targetId) return prev; // notes and documents always live in a folder
+        if (!target || target.kind !== kind) return prev; // notes/documents always live in a folder of their tab
         const key = kind === "note" ? "notes" : "docs";
         return { ...prev, [key]: prev[key].map((i) => (i.id === id ? { ...i, folderId: targetId } : i)) };
       });
@@ -243,13 +247,15 @@ export default function App() {
       // If its folder is gone or still in the Trash, put it in a default folder.
       const key = kind === "note" ? "notes" : "docs";
       const item = next[key].find((i) => i.id === id);
-      const folderOk = item && !hidden.has(item.folderId) && next.folders.some((f) => f.id === item.folderId);
+      const folderOk =
+        item && !hidden.has(item.folderId) && next.folders.some((f) => f.id === item.folderId && f.kind === kind);
       if (!item || folderOk) return next;
 
       const visible = next.folders.filter((f) => !hidden.has(f.id));
       const placed = placeInFolders(
         [{ ...item, folderId: null }],
         visible,
+        kind,
         kind === "note" ? "My Notes" : "My Documents",
         createId,
       );
@@ -338,16 +344,6 @@ export default function App() {
     [toast],
   );
 
-  const resetApp = useCallback(async () => {
-    await clearAppData();
-    const empty = { notes: [], docs: [], folders: [] };
-    saver.current = createSaver(empty);
-    setData(empty);
-    setLastBackup(null);
-    setProfile(null);
-    navigate("", { replace: true });
-  }, []);
-
   const actions = useMemo(
     () => ({
       newNote,
@@ -366,7 +362,6 @@ export default function App() {
       togglePin,
       exportBackup,
       readBackup,
-      resetApp,
       toggleTheme: () => setTheme((t) => (t === "dark" ? "light" : "dark")),
     }),
     [
@@ -386,7 +381,6 @@ export default function App() {
       togglePin,
       exportBackup,
       readBackup,
-      resetApp,
     ],
   );
 
@@ -417,7 +411,7 @@ export default function App() {
 
   // "#/notes/<folderId>" or "#/docs/<folderId>" opens a folder.
   const tab = page === "docs" ? "docs" : "notes";
-  const folder = live.folders.find((f) => f.id === id) ?? null;
+  const folder = live.folders.find((f) => f.id === id && f.kind === (tab === "docs" ? "doc" : "note")) ?? null;
 
   return (
     <Home

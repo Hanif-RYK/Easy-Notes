@@ -97,17 +97,10 @@ export function writeChanges(changes) {
   });
 }
 
-export function clearRecords() {
-  return transaction(STORES, "readwrite", (tx) => {
-    for (const name of STORES) tx.objectStore(name).clear();
-  });
-}
-
 // ---- Files -----------------------------------------------------------------
 
 export const putFile = (id, blob) => transaction("files", "readwrite", (tx) => tx.objectStore("files").put(blob, id));
 export const deleteFile = (id) => transaction("files", "readwrite", (tx) => tx.objectStore("files").delete(id));
-export const clearFiles = () => transaction("files", "readwrite", (tx) => tx.objectStore("files").clear());
 
 export async function getFile(id) {
   const db = await openDb();
