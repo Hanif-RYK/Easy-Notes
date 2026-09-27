@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { navigate, useHashRoute } from "./hooks/useHashRoute.js";
 import { useToast } from "./components/Toast.jsx";
 import { clearFiles, deleteFile, putFile } from "./lib/fileStore.js";
-import { descendantIds } from "./lib/folders.js";
+import { descendantIds, placeInFolders } from "./lib/folders.js";
 import {
   clearAppData,
   createId,
@@ -25,14 +25,22 @@ import { DocViewer } from "./screens/DocViewer.jsx";
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
 const isAllowedFile = (file) => file.type === "application/pdf" || file.type.startsWith("image/");
 
+/** Loads saved data and makes sure every note and document is inside a folder. */
+function loadLibrary() {
+  const notes = placeInFolders(loadNotes(), loadFolders(), "note", "My Notes", createId);
+  const docs = placeInFolders(loadDocs(), notes.folders, "doc", "My Documents", createId);
+  return { notes: notes.items, docs: docs.items, folders: docs.folders };
+}
+
 export default function App() {
   const toast = useToast();
   const route = useHashRoute();
 
   const [profile, setProfile] = useState(loadProfile);
-  const [notes, setNotes] = useState(loadNotes);
-  const [docs, setDocs] = useState(loadDocs);
-  const [folders, setFolders] = useState(loadFolders);
+  const [library] = useState(loadLibrary);
+  const [notes, setNotes] = useState(library.notes);
+  const [docs, setDocs] = useState(library.docs);
+  const [folders, setFolders] = useState(library.folders);
   const [theme, setTheme] = useState(loadTheme);
 
   // Folder a brand-new (not yet saved) note should be created in, by note id.
@@ -57,7 +65,7 @@ export default function App() {
   }, [theme]);
 
   // ---- Notes -------------------------------------------------------------
-  const newNote = useCallback((folderId = null) => {
+  const newNote = useCallback((folderId) => {
     const id = createId();
     newNoteFolders.current.set(id, folderId);
     navigate(`note/${id}`);
@@ -206,7 +214,7 @@ export default function App() {
   const resetApp = useCallback(async () => {
     clearAppData();
     await clearFiles().catch(() => {});
-    setNotes(loadNotes());
+    setNotes([]);
     setDocs([]);
     setFolders([]);
     setProfile(null);

@@ -6,7 +6,8 @@ Everything is stored privately in the browser on your device — no account or s
 ## Features
 
 - Notes with autosave, search, sort and pin-to-top
-- Folders and sub-folders (any depth) for notes and documents, with move, rename and delete
+- Folder-first: create a folder, then write notes or add documents inside it
+- Sub-folders at any depth, with move, rename and delete; pinned items appear on the main screen
 - Upload PDFs and images (or take a photo on mobile), then view, rename, share or download them
 - Print / save a note as PDF
 - Light and dark mode

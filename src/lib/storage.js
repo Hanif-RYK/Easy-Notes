@@ -32,29 +32,9 @@ export function createId() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function welcomeNote() {
-  const now = Date.now();
-  return {
-    id: createId(),
-    title: "Welcome to Easy Notes 👋",
-    body: [
-      "A few tips to get started:",
-      "",
-      "• Tap + New to write a note or create a folder. Notes save automatically.",
-      "• Switch to Documents to keep PDFs and photos in one place.",
-      "• Use the ⋯ menu to pin, move to a folder or delete an item.",
-      "• Everything stays private on this device.",
-    ].join("\n"),
-    pinned: false,
-    folderId: null,
-    createdAt: now,
-    updatedAt: now,
-  };
-}
-
 export function loadNotes() {
-  const notes = read(KEYS.notes, null);
-  return Array.isArray(notes) ? notes : [welcomeNote()];
+  const notes = read(KEYS.notes, []);
+  return Array.isArray(notes) ? notes : [];
 }
 
 export const saveNotes = (notes) => write(KEYS.notes, notes);

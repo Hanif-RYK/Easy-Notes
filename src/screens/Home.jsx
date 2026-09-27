@@ -44,13 +44,6 @@ const DOC_FILTERS = [
 
 const sectionTitle = "mb-2 px-1 text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400";
 
-function greeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
-}
-
 function sortItems(items, sort, getTitle, getDate) {
   const list = [...items];
   if (sort === "az") return list.sort((a, b) => getTitle(a).localeCompare(getTitle(b), undefined, { sensitivity: "base" }));
@@ -100,7 +93,9 @@ export function Home({ tab, folder, notes, docs, folders, profile, theme, action
             ? i.title.toLowerCase().includes(q) || i.body.toLowerCase().includes(q)
             : i.name.toLowerCase().includes(q),
         )
-      : allItems.filter((i) => (i.folderId ?? null) === folderId);
+      : folderId
+        ? allItems.filter((i) => i.folderId === folderId)
+        : allItems.filter((i) => i.pinned); // top level: folders, plus pinned items for quick access
     if (!isNotes && docFilter === "pdf") list = list.filter((d) => isPdf(d.type));
     if (!isNotes && docFilter === "image") list = list.filter((d) => isImage(d.type));
     return isNotes
@@ -167,7 +162,7 @@ export function Home({ tab, folder, notes, docs, folders, profile, theme, action
       : isImage(item.type)
         ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300"
         : "bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300";
-    const location = searching && item.folderId ? `in ${folderName.get(item.folderId)} · ` : "";
+    const location = (searching || !folder) && item.folderId ? `in ${folderName.get(item.folderId)} · ` : "";
 
     return (
       <li key={item.id} className={rowClass}>
@@ -228,12 +223,14 @@ export function Home({ tab, folder, notes, docs, folders, profile, theme, action
         ];
 
   const newActions = [
-    ...(isNotes
-      ? [{ label: "New note", icon: StickyNote, onClick: () => actions.newNote(folderId) }]
-      : [
-          { label: "Upload PDF or image", icon: Upload, onClick: () => fileInput.current?.click() },
-          { label: "Take a photo", icon: Camera, onClick: () => cameraInput.current?.click() },
-        ]),
+    ...(!folder
+      ? []
+      : isNotes
+        ? [{ label: "New note", icon: StickyNote, onClick: () => actions.newNote(folderId) }]
+        : [
+            { label: "Upload PDF or image", icon: Upload, onClick: () => fileInput.current?.click() },
+            { label: "Take a photo", icon: Camera, onClick: () => cameraInput.current?.click() },
+          ]),
     {
       label: folder ? `New folder in "${folder.name}"` : "New folder",
       icon: FolderPlus,
@@ -287,12 +284,7 @@ export function Home({ tab, folder, notes, docs, folders, profile, theme, action
       <header className="sticky top-0 z-20 border-b border-slate-200/70 bg-slate-50/85 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/85">
         <div className="mx-auto max-w-3xl px-4 pt-4 pb-3 sm:px-6">
           <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">
-                {greeting()}, {profile.name || "there"}
-              </p>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Easy Notes</h1>
-            </div>
+            <h1 className="truncate text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Easy Notes</h1>
             <div className="flex items-center gap-1">
               <button
                 type="button"
@@ -427,7 +419,7 @@ export function Home({ tab, folder, notes, docs, folders, profile, theme, action
             query={query}
             inFolder={!!folder}
             filtered={!isNotes && docFilter !== "all"}
-            onAdd={() => setSheet("new")}
+            onAdd={() => (folder ? setSheet("new") : setPrompt({ type: "newFolder" }))}
           />
         ) : (
           <div className="space-y-6">
@@ -460,11 +452,11 @@ export function Home({ tab, folder, notes, docs, folders, profile, theme, action
         <div className="mx-auto flex max-w-3xl justify-end px-4 sm:px-6">
           <button
             type="button"
-            onClick={() => setSheet("new")}
+            onClick={() => (folder ? setSheet("new") : setPrompt({ type: "newFolder" }))}
             className="btn-primary pointer-events-auto h-14 rounded-full px-6 shadow-lg shadow-indigo-600/30"
           >
-            <Plus className="h-5 w-5" strokeWidth={2.5} />
-            New
+            {folder ? <Plus className="h-5 w-5" strokeWidth={2.5} /> : <FolderPlus className="h-5 w-5" />}
+            {folder ? "New" : "New folder"}
           </button>
         </div>
       </div>
@@ -638,9 +630,11 @@ export function Home({ tab, folder, notes, docs, folders, profile, theme, action
 }
 
 function EmptyState({ isNotes, query, inFolder, filtered, onAdd }) {
-  const Icon = query ? Search : inFolder ? FolderOpen : isNotes ? StickyNote : FileText;
-  let title = isNotes ? "No notes yet" : "No documents yet";
-  let text = isNotes ? "Write down your first idea." : "Keep your PDFs and photos safe in one place.";
+  const Icon = query ? Search : inFolder ? FolderOpen : FolderPlus;
+  let title = "Create your first folder";
+  let text = isNotes
+    ? "Notes are kept inside folders. Create a folder, then write your notes in it."
+    : "Documents are kept inside folders. Create a folder, then add your PDFs and photos to it.";
 
   if (query) {
     title = "No results";
@@ -662,8 +656,8 @@ function EmptyState({ isNotes, query, inFolder, filtered, onAdd }) {
       <p className="mt-1 max-w-xs text-sm text-slate-500 dark:text-slate-400">{text}</p>
       {!query && !filtered && (
         <button type="button" onClick={onAdd} className="btn-secondary mt-5">
-          <Plus className="h-4 w-4" />
-          Add something
+          {inFolder ? <Plus className="h-4 w-4" /> : <FolderPlus className="h-4 w-4" />}
+          {inFolder ? "Add something" : "New folder"}
         </button>
       )}
     </div>
