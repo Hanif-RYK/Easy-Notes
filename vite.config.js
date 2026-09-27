@@ -7,6 +7,11 @@ import { VitePWA } from "vite-plugin-pwa";
 // GitHub Pages sub-paths as well as on the root of any static host.
 export default defineConfig({
   base: "./",
+  // Support older phone browsers too (e.g. iPhones that aren't fully updated).
+  build: {
+    target: ["es2020", "chrome87", "safari14", "firefox78", "edge88"],
+    chunkSizeWarningLimit: 1500, // the PDF viewer is large but only loaded when a PDF is opened
+  },
   plugins: [
     react(),
     tailwindcss(),
