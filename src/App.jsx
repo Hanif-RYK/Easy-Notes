@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Loader2 } from "lucide-react";
 import { navigate, useHashRoute } from "./hooks/useHashRoute.js";
 import { useToast } from "./components/Toast.jsx";
 import { backupFileName, createBackup, dataUrlToBlob, mergeBackup, parseBackup } from "./lib/backup.js";
-import { deleteFile, getFile, putFile } from "./lib/db.js";
+import { deleteFile, getFile, putFile, setBlockedHandler } from "./lib/db.js";
 import { descendantIds, placeInFolders } from "./lib/folders.js";
 import { createSaver } from "./lib/persistence.js";
 import {
@@ -27,6 +26,7 @@ import {
   restore,
   trashEntries,
 } from "./lib/trash.js";
+import { LoadingScreen } from "./screens/LoadingScreen.jsx";
 import { Welcome } from "./screens/Welcome.jsx";
 import { Home } from "./screens/Home.jsx";
 import { NoteEditor } from "./screens/NoteEditor.jsx";
@@ -62,7 +62,7 @@ export default function App() {
   const [theme, setTheme] = useState(loadTheme);
   const [lastBackup, setLastBackup] = useState(loadLastBackup);
   const [data, setData] = useState(null); // { notes, docs, folders } incl. trashed items
-  const [loadError, setLoadError] = useState(false);
+  const [loadState, setLoadState] = useState("loading"); // loading | slow | blocked | error
 
   const saver = useRef(null);
   const dataRef = useRef(data);
@@ -77,6 +77,9 @@ export default function App() {
   // ---- Loading & saving --------------------------------------------------
   useEffect(() => {
     let cancelled = false;
+    // Explain what's happening instead of showing a spinner forever.
+    setBlockedHandler(() => !cancelled && setLoadState("blocked"));
+    const slowTimer = setTimeout(() => !cancelled && setLoadState((s) => (s === "loading" ? "slow" : s)), 10_000);
     loadData()
       .then((loaded) => {
         if (cancelled) return;
@@ -85,9 +88,11 @@ export default function App() {
         });
         setData(loaded);
       })
-      .catch(() => !cancelled && setLoadError(true));
+      .catch(() => !cancelled && setLoadState("error"))
+      .finally(() => clearTimeout(slowTimer));
     return () => {
       cancelled = true;
+      clearTimeout(slowTimer);
     };
   }, [toast]);
 
@@ -386,25 +391,7 @@ export default function App() {
   );
 
   // ---- Routing -----------------------------------------------------------
-  if (loadError) {
-    return (
-      <main className="flex min-h-dvh flex-col items-center justify-center px-6 text-center">
-        <h1 className="text-lg font-semibold text-slate-900 dark:text-white">Couldn't open your data</h1>
-        <p className="mt-2 max-w-xs text-sm text-slate-500 dark:text-slate-400">
-          Close any other Easy Notes tabs and reload this page. If it still doesn't open, your browser may be blocking
-          storage (for example in a private window).
-        </p>
-      </main>
-    );
-  }
-
-  if (!live) {
-    return (
-      <main className="flex min-h-dvh items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-slate-400" aria-label="Loading" />
-      </main>
-    );
-  }
+  if (!live) return <LoadingScreen state={loadState} />;
 
   if (!profile) return <Welcome onStart={startApp} />;
 

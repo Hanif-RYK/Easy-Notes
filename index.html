@@ -21,7 +21,20 @@
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Replaced by the app once it starts. Shown only if it can't start at all. -->
+      <div id="boot" style="display:none;max-width:22rem;margin:30vh auto 0;padding:0 1.5rem;text-align:center;font-family:system-ui,sans-serif;color:#475569">
+        <p style="font-weight:600;color:#0f172a">Easy Notes couldn't start</p>
+        <p style="font-size:14px;line-height:1.5">Please reload the page. If it still doesn't open, update your browser or try Chrome.</p>
+        <button onclick="location.reload()" style="margin-top:12px;padding:10px 18px;border:0;border-radius:12px;background:#4f46e5;color:#fff;font-weight:600">Reload</button>
+      </div>
+    </div>
+    <script>
+      setTimeout(function () {
+        var boot = document.getElementById("boot");
+        if (boot) boot.style.display = "block";
+      }, 12000);
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

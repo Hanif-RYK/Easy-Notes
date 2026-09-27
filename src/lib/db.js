@@ -9,6 +9,16 @@ const DB_VERSION = 2;
 export const STORES = ["notes", "docs", "folders"];
 
 let dbPromise;
+let onBlocked = () => {};
+
+/**
+ * Called when opening the database has to wait because an older version of
+ * the app is still open in another tab. Opening continues by itself as soon
+ * as that tab is closed.
+ */
+export function setBlockedHandler(fn) {
+  onBlocked = fn;
+}
 
 function openDb() {
   if (!dbPromise) {
@@ -19,9 +29,22 @@ function openDb() {
         if (event.oldVersion < 1) db.createObjectStore("files");
         if (event.oldVersion < 2) for (const name of STORES) db.createObjectStore(name, { keyPath: "id" });
       };
-      request.onsuccess = () => resolve(request.result);
+      request.onsuccess = () => {
+        const db = request.result;
+        // A newer version of the app wants to upgrade the database (e.g. in
+        // another tab): close ours so it isn't blocked; we reopen on next use.
+        db.onversionchange = () => {
+          db.close();
+          dbPromise = undefined;
+        };
+        db.onclose = () => {
+          dbPromise = undefined;
+        };
+        resolve(db);
+      };
       request.onerror = () => reject(request.error);
-      request.onblocked = () => reject(new Error("Database is blocked by another tab"));
+      // Don't fail: keep waiting, and let the app tell the user what to do.
+      request.onblocked = () => onBlocked();
     });
     // Allow a retry later if opening failed (e.g. storage blocked).
     dbPromise.catch(() => {
