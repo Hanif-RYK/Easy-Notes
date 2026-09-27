@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { ArrowLeft, Check, MoreHorizontal, Pin, PinOff, Printer, Share2, Trash2 } from "lucide-react";
 import { goBack } from "../hooks/useHashRoute.js";
 import { ActionSheet, ConfirmDialog } from "../components/Modal.jsx";
 import { useToast } from "../components/Toast.jsx";
 import { formatDate } from "../lib/format.js";
 
-const AUTOSAVE_DELAY = 500;
+// The note is kept in the editor while typing and saved once the user pauses,
+// so typing never waits for storage.
+const AUTOSAVE_DELAY = 1000;
 
 export function NoteEditor({ id, note, actions }) {
   const toast = useToast();
@@ -38,6 +41,20 @@ export function NoteEditor({ id, note, actions }) {
     };
   }, [actions]);
 
+  // Save right away if the app is closed or moved to the background.
+  useEffect(() => {
+    const flush = () => {
+      if (!deleted.current) flushSync(() => actions.saveNote(draft.current));
+    };
+    const onVisibility = () => document.visibilityState === "hidden" && flush();
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [actions]);
+
   const share = async () => {
     const text = [title.trim(), body.trim()].filter(Boolean).join("\n\n");
     if (!text) return toast("Nothing to share yet");
@@ -60,7 +77,8 @@ export function NoteEditor({ id, note, actions }) {
     goBack();
   };
 
-  const status = isEmpty && isNew ? "" : dirty ? "Saving…" : "Saved";
+  // Only show "Saved" once everything is stored; no flicker while typing.
+  const status = !isNew && !dirty ? "Saved" : "";
 
   return (
     <>
