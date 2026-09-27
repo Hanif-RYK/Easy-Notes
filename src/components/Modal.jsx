@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 
 /**
@@ -11,7 +11,9 @@ export function Modal({ open, onClose, title, variant = "sheet", children }) {
   const titleId = useId();
   // Keep the latest onClose without re-running the focus effect on every render.
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+  useLayoutEffect(() => {
+    onCloseRef.current = onClose;
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -94,7 +96,7 @@ export function ActionSheet({ open, onClose, title, actions }) {
   );
 }
 
-export function ConfirmDialog({ open, onClose, onConfirm, title, message, confirmLabel = "Delete" }) {
+export function ConfirmDialog({ open, onClose, onConfirm, title, message, confirmLabel = "Delete", tone = "danger" }) {
   return (
     <Modal open={open} onClose={onClose} title={title} variant="dialog">
       <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">{message}</p>
@@ -108,7 +110,7 @@ export function ConfirmDialog({ open, onClose, onConfirm, title, message, confir
             onClose();
             onConfirm();
           }}
-          className="btn-danger flex-1"
+          className={`${tone === "danger" ? "btn-danger" : "btn-primary"} flex-1`}
         >
           {confirmLabel}
         </button>
@@ -118,48 +120,49 @@ export function ConfirmDialog({ open, onClose, onConfirm, title, message, confir
 }
 
 /** Dialog with a single text field, used for renaming. */
-export function PromptDialog({ open, onClose, onSubmit, title, label, initialValue = "", submitLabel = "Save" }) {
+export function PromptDialog({ open, onClose, title, ...form }) {
+  // The form is mounted each time the dialog opens, so it starts with `initialValue`.
+  return (
+    <Modal open={open} onClose={onClose} title={title} variant="dialog">
+      <PromptForm onClose={onClose} {...form} />
+    </Modal>
+  );
+}
+
+function PromptForm({ onClose, onSubmit, label, initialValue = "", submitLabel = "Save" }) {
   const [value, setValue] = useState(initialValue);
   const inputId = useId();
-
-  // Reset the field each time the dialog opens.
-  useEffect(() => {
-    if (open) setValue(initialValue);
-  }, [open, initialValue]);
-
   const trimmed = value.trim();
 
   return (
-    <Modal open={open} onClose={onClose} title={title} variant="dialog">
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!trimmed) return;
-          onClose();
-          onSubmit(trimmed);
-        }}
-      >
-        <label htmlFor={inputId} className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
-          {label}
-        </label>
-        <input
-          id={inputId}
-          className="input"
-          value={value}
-          maxLength={120}
-          onChange={(e) => setValue(e.target.value)}
-          onFocus={(e) => e.target.select()}
-          autoFocus
-        />
-        <div className="mt-6 flex gap-3">
-          <button type="button" onClick={onClose} className="btn-secondary flex-1">
-            Cancel
-          </button>
-          <button type="submit" disabled={!trimmed} className="btn-primary flex-1">
-            {submitLabel}
-          </button>
-        </div>
-      </form>
-    </Modal>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!trimmed) return;
+        onClose();
+        onSubmit(trimmed);
+      }}
+    >
+      <label htmlFor={inputId} className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
+        {label}
+      </label>
+      <input
+        id={inputId}
+        className="input"
+        value={value}
+        maxLength={120}
+        onChange={(e) => setValue(e.target.value)}
+        onFocus={(e) => e.target.select()}
+        autoFocus
+      />
+      <div className="mt-6 flex gap-3">
+        <button type="button" onClick={onClose} className="btn-secondary flex-1">
+          Cancel
+        </button>
+        <button type="submit" disabled={!trimmed} className="btn-primary flex-1">
+          {submitLabel}
+        </button>
+      </div>
+    </form>
   );
 }

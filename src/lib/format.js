@@ -26,15 +26,6 @@ export function formatSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function initials(name) {
-  const parts = (name || "").trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "EN";
-  return parts
-    .slice(0, 2)
-    .map((p) => p[0].toUpperCase())
-    .join("");
-}
-
 export const isImage = (type) => typeof type === "string" && type.startsWith("image/");
 export const isPdf = (type) => type === "application/pdf";
 

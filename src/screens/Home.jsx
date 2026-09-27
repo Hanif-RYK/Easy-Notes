@@ -10,13 +10,13 @@ import {
   FolderOpen,
   FolderPlus,
   Image as ImageIcon,
-  Moon,
   MoreHorizontal,
   Pencil,
   Pin,
   PinOff,
   Plus,
   Search,
+  Settings as SettingsIcon,
   SlidersHorizontal,
   StickyNote,
   Trash2,
@@ -24,10 +24,10 @@ import {
   X,
 } from "lucide-react";
 import { goBack, navigate } from "../hooks/useHashRoute.js";
-import { ActionSheet, ConfirmDialog, Modal, PromptDialog } from "../components/Modal.jsx";
+import { ActionSheet, Modal, PromptDialog } from "../components/Modal.jsx";
 import { MoveDialog } from "../components/MoveDialog.jsx";
 import { descendantIds, folderPath } from "../lib/folders.js";
-import { formatDate, formatSize, initials, isImage, isPdf, preview } from "../lib/format.js";
+import { formatDate, formatSize, isImage, isPdf, preview } from "../lib/format.js";
 
 const SORTS = [
   { id: "recent", label: "Most recent" },
@@ -52,15 +52,15 @@ function sortItems(items, sort, getTitle, getDate) {
 
 const itemTitle = (kind, item) => (kind === "note" ? item.title || "Untitled" : item.name);
 
-export function Home({ tab, folder, notes, docs, folders, profile, theme, actions }) {
+export function Home({ tab, folder, notes, docs, folders, lastBackup, actions }) {
+  const [now] = useState(Date.now); // time the screen opened, for the backup reminder
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("recent");
   const [docFilter, setDocFilter] = useState("all");
-  const [sheet, setSheet] = useState(null); // "filter" | "new" | "profile" | null
+  const [sheet, setSheet] = useState(null); // "filter" | "new" | null
   const [menu, setMenu] = useState(null); // { kind, item } — kind: "note" | "doc" | "folder"
   const [prompt, setPrompt] = useState(null); // { type, item? }
   const [moving, setMoving] = useState(null); // { kind, item }
-  const [deleting, setDeleting] = useState(null); // { kind, item } | "all"
 
   const fileInput = useRef(null);
   const cameraInput = useRef(null);
@@ -72,7 +72,7 @@ export function Home({ tab, folder, notes, docs, folders, profile, theme, action
   const searching = q.length > 0;
   const filtersActive = sort !== "recent" || (!isNotes && docFilter !== "all");
 
-  const tabFolders = useMemo(() => folders.filter((f) => f.kind === kind), [folders, kind]);
+  const tabFolders = folders; // folders are shared by notes and documents
   const allItems = isNotes ? notes : docs;
   const folderName = useMemo(() => new Map(tabFolders.map((f) => [f.id, f.name])), [tabFolders]);
   const path = useMemo(() => folderPath(tabFolders, folderId), [tabFolders, folderId]);
@@ -206,7 +206,7 @@ export function Home({ tab, folder, notes, docs, folders, profile, theme, action
           { label: "Open", icon: FolderOpen, onClick: () => openFolder(menu.item.id) },
           { label: "Rename", icon: Pencil, onClick: () => setPrompt({ type: "renameFolder", item: menu.item }) },
           { label: "Move to folder", icon: FolderInput, onClick: () => setMoving(menu) },
-          { label: "Delete", icon: Trash2, danger: true, onClick: () => setDeleting(menu) },
+          { label: "Move to Trash", icon: Trash2, danger: true, onClick: () => trash(menu) },
         ]
       : [
           {
@@ -218,7 +218,7 @@ export function Home({ tab, folder, notes, docs, folders, profile, theme, action
             ? { label: "Rename", icon: Pencil, onClick: () => setPrompt({ type: "renameDoc", item: menu.item }) }
             : { label: "Edit", icon: Pencil, onClick: () => navigate(`note/${menu.item.id}`) },
           { label: "Move to folder", icon: FolderInput, onClick: () => setMoving(menu) },
-          { label: "Delete", icon: Trash2, danger: true, onClick: () => setDeleting(menu) },
+          { label: "Move to Trash", icon: Trash2, danger: true, onClick: () => trash(menu) },
         ];
 
   const newActions = [
@@ -241,40 +241,27 @@ export function Home({ tab, folder, notes, docs, folders, profile, theme, action
     newFolder: { title: "New folder", label: "Folder name", initial: "", submit: "Create" },
     renameFolder: { title: "Rename folder", label: "Folder name", initial: prompt?.item?.name, submit: "Save" },
     renameDoc: { title: "Rename document", label: "Document name", initial: prompt?.item?.name, submit: "Save" },
-    profile: { title: "Your name", label: "Name", initial: profile.name, submit: "Save" },
   }[prompt?.type ?? "newFolder"];
 
   const submitPrompt = (value) => {
-    if (prompt.type === "newFolder") actions.createFolder(kind, value, folderId);
+    if (prompt.type === "newFolder") actions.createFolder(value, folderId);
     else if (prompt.type === "renameFolder") actions.renameFolder(prompt.item.id, value);
-    else if (prompt.type === "renameDoc") actions.renameDoc(prompt.item.id, value);
-    else actions.renameProfile(value);
+    else actions.renameDoc(prompt.item.id, value);
   };
 
-  const deleteMessage = () => {
-    if (deleting === "all") return "All notes, documents, folders and settings on this device will be permanently removed.";
-    if (!deleting) return "";
-    if (deleting.kind !== "folder") return `"${itemTitle(deleting.kind, deleting.item)}" will be permanently deleted.`;
-    const ids = descendantIds(folders, deleting.item.id);
-    const inside = allItems.filter((i) => ids.has(i.folderId)).length + ids.size - 1;
-    return inside > 0
-      ? `"${deleting.item.name}" and everything inside it (${inside} ${inside === 1 ? "item" : "items"}) will be permanently deleted.`
-      : `"${deleting.item.name}" will be permanently deleted.`;
+  /** Moves an item to the Trash (the toast offers Undo). */
+  const trash = ({ kind: k, item }) => {
+    // If the open folder (or one of its parents) is trashed, go back to where it was.
+    if (k === "folder" && folderId && descendantIds(folders, item.id).has(folderId)) {
+      navigate(item.parentId ? `${tab}/${item.parentId}` : tab, { replace: true });
+    }
+    actions.trashItem(k, item.id);
   };
 
-  const confirmDelete = () => {
-    if (deleting === "all") return actions.resetApp();
-    const { kind: k, item } = deleting;
-    if (k === "folder") {
-      // If the open folder is being deleted, go back to where it was.
-      const openIsInside = folderId && descendantIds(folders, item.id).has(folderId);
-      actions.removeFolder(item.id);
-      if (openIsInside) navigate(item.parentId ? `${tab}/${item.parentId}` : tab, { replace: true });
-    } else if (k === "doc") actions.removeDoc(item.id);
-    else actions.removeNote(item.id);
-  };
+  // Remind about backups when there is data and no backup in the last 14 days.
+  const backupDue =
+    (notes.length > 0 || docs.length > 0) && (!lastBackup || now - lastBackup > 14 * 86_400_000);
 
-  const totalPinned = notes.filter((n) => n.pinned).length + docs.filter((d) => d.pinned).length;
   const isEmpty = visibleFolders.length === 0 && visibleItems.length === 0;
 
   return (
@@ -287,11 +274,15 @@ export function Home({ tab, folder, notes, docs, folders, profile, theme, action
             <div className="flex items-center gap-1">
               <button
                 type="button"
-                onClick={() => setSheet("profile")}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600 text-sm font-semibold text-white transition hover:bg-indigo-700 active:scale-95"
-                aria-label="Profile and settings"
+                onClick={() => navigate("settings")}
+                className="icon-btn relative"
+                aria-label={backupDue ? "Settings (backup recommended)" : "Settings"}
+                title="Settings"
               >
-                {initials(profile.name)}
+                <SettingsIcon className="h-5 w-5" />
+                {backupDue && (
+                  <span className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-slate-50 dark:ring-slate-950" />
+                )}
               </button>
             </div>
           </div>
@@ -340,8 +331,8 @@ export function Home({ tab, folder, notes, docs, folders, profile, theme, action
           {/* Tabs */}
           <div role="tablist" className="mt-3 flex rounded-xl bg-slate-200/60 p-1 dark:bg-slate-800/80">
             {[
-              { id: "notes", label: "Notes", count: notes.length },
-              { id: "docs", label: "Documents", count: docs.length },
+              { id: "notes", label: "Notes" },
+              { id: "docs", label: "Documents" },
             ].map((t) => (
               <button
                 key={t.id}
@@ -356,7 +347,6 @@ export function Home({ tab, folder, notes, docs, folders, profile, theme, action
                 }`}
               >
                 {t.label}
-                <span className="ml-1.5 text-xs font-medium text-slate-400">{t.count}</span>
               </button>
             ))}
           </div>
@@ -521,7 +511,6 @@ export function Home({ tab, folder, notes, docs, folders, profile, theme, action
       <MoveDialog
         target={moving}
         folders={folders}
-        folderKind={kind}
         onClose={() => setMoving(null)}
         onMove={(targetId) => actions.moveItem(moving.kind, moving.item.id, targetId)}
       />
@@ -536,82 +525,6 @@ export function Home({ tab, folder, notes, docs, folders, profile, theme, action
         onSubmit={submitPrompt}
       />
 
-      <ConfirmDialog
-        open={!!deleting}
-        onClose={() => setDeleting(null)}
-        title={
-          deleting === "all"
-            ? "Delete all data?"
-            : `Delete this ${{ doc: "document", note: "note", folder: "folder" }[deleting?.kind] ?? "item"}?`
-        }
-        message={deleteMessage()}
-        confirmLabel={deleting === "all" ? "Delete everything" : "Delete"}
-        onConfirm={confirmDelete}
-      />
-
-      <Modal open={sheet === "profile"} onClose={() => setSheet(null)} title="Profile & settings">
-        <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-lg font-semibold text-white">
-            {initials(profile.name)}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-semibold text-slate-900 dark:text-white">{profile.name || "Guest"}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Data stored on this device</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              setSheet(null);
-              setPrompt({ type: "profile" });
-            }}
-            className="icon-btn"
-            aria-label="Edit name"
-          >
-            <Pencil className="h-4 w-4" />
-          </button>
-        </div>
-
-        <dl className="mt-5 grid grid-cols-4 gap-2 text-center">
-          {[
-            ["Notes", notes.length],
-            ["Docs", docs.length],
-            ["Folders", folders.length],
-            ["Pinned", totalPinned],
-          ].map(([label, value]) => (
-            <div key={label} className="rounded-xl bg-slate-100 py-3 dark:bg-slate-800">
-              <dd className="text-lg font-bold text-slate-900 dark:text-white">{value}</dd>
-              <dt className="text-xs text-slate-500 dark:text-slate-400">{label}</dt>
-            </div>
-          ))}
-        </dl>
-
-        <div className="mt-5 divide-y divide-slate-100 rounded-2xl border border-slate-200/70 dark:divide-slate-800 dark:border-slate-800">
-          <label className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3.5">
-            <span className="flex items-center gap-3 text-sm font-medium text-slate-700 dark:text-slate-200">
-              <Moon className="h-5 w-5 text-slate-400" />
-              Dark mode
-            </span>
-            <input
-              type="checkbox"
-              role="switch"
-              checked={theme === "dark"}
-              onChange={actions.toggleTheme}
-              className="relative h-6 w-11 cursor-pointer appearance-none rounded-full bg-slate-300 transition before:absolute before:top-0.5 before:left-0.5 before:h-5 before:w-5 before:rounded-full before:bg-white before:shadow before:transition checked:bg-indigo-600 checked:before:translate-x-5 dark:bg-slate-600 dark:checked:bg-indigo-500"
-            />
-          </label>
-          <button
-            type="button"
-            onClick={() => {
-              setSheet(null);
-              setDeleting("all");
-            }}
-            className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-sm font-medium text-rose-600 dark:text-rose-400"
-          >
-            <Trash2 className="h-5 w-5" />
-            Delete all data
-          </button>
-        </div>
-      </Modal>
     </div>
   );
 }

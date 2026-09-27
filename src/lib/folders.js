@@ -1,6 +1,6 @@
-// Helpers for nested folders. A folder is { id, name, kind, parentId }, where
-// kind is "note" or "doc" and parentId is null for top-level folders.
-// Notes and documents point to their folder with `folderId` (null = top level).
+// Helpers for nested folders. A folder is { id, name, parentId, createdAt },
+// where parentId is null for top-level folders. Folders are shared by notes
+// and documents; both point to their folder with `folderId`.
 
 /** Folder and all of its sub-folders' ids (at any depth). */
 export function descendantIds(folders, folderId) {
@@ -30,14 +30,14 @@ export function folderPath(folders, folderId) {
   return path;
 }
 
-/** Folders of one kind as a flat, depth-first list with their nesting depth. */
-export function folderTree(folders, kind) {
-  const ofKind = folders
-    .filter((f) => f.kind === kind)
-    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+
+/** Folders as a flat, depth-first list with their nesting depth. */
+export function folderTree(folders) {
+  const sorted = [...folders].sort(byName);
   const result = [];
   const walk = (parentId, depth) => {
-    for (const f of ofKind) {
+    for (const f of sorted) {
       if ((f.parentId ?? null) === parentId) {
         result.push({ folder: f, depth });
         walk(f.id, depth + 1);
@@ -50,20 +50,55 @@ export function folderTree(folders, kind) {
 
 /**
  * Notes and documents must live inside a folder. Items that are at the top
- * level (older data) or whose folder no longer exists are moved into a
- * default folder, which is created only when needed.
+ * level or whose folder no longer exists are moved into a default folder,
+ * which is created only when needed.
  */
-export function placeInFolders(items, folders, kind, defaultName, createId) {
-  const known = new Set(folders.filter((f) => f.kind === kind).map((f) => f.id));
+export function placeInFolders(items, folders, defaultName, createId) {
+  const known = new Set(folders.map((f) => f.id));
   if (items.every((i) => known.has(i.folderId))) return { items, folders };
 
-  let target = folders.find((f) => f.kind === kind && f.parentId === null && f.name === defaultName);
+  let target = folders.find((f) => !f.parentId && !f.deletedAt && f.name === defaultName);
   const nextFolders = target
     ? folders
-    : [...folders, (target = { id: createId(), name: defaultName, kind, parentId: null, createdAt: Date.now() })];
+    : [...folders, (target = { id: createId(), name: defaultName, parentId: null, createdAt: Date.now() })];
 
   return {
     items: items.map((i) => (known.has(i.folderId) ? i : { ...i, folderId: target.id })),
     folders: nextFolders,
   };
+}
+
+/**
+ * Older versions kept separate folders for notes and documents. Now folders
+ * are shared, so folders with the same name in the same place are merged
+ * (e.g. "Work" for notes and "Work" for documents become one "Work").
+ */
+export function mergeDuplicateFolders({ notes, docs, folders }) {
+  const keep = new Map(); // "parentId/name" -> kept folder id
+  const remap = new Map(); // removed folder id -> kept folder id
+  const result = [];
+
+  // Handle parents before children so merged parents are already remapped.
+  for (const { folder } of folderTree(folders)) {
+    const parentId = folder.parentId ? (remap.get(folder.parentId) ?? folder.parentId) : null;
+    const key = `${parentId}/${folder.name.trim().toLowerCase()}`;
+    const { kind: _kind, ...rest } = folder;
+    if (keep.has(key) && !folder.deletedAt) {
+      remap.set(folder.id, keep.get(key));
+    } else {
+      if (!folder.deletedAt) keep.set(key, folder.id);
+      result.push({ ...rest, parentId });
+    }
+  }
+  // Keep folders the tree walk could not reach (broken parent links) at the top level.
+  const seen = new Set([...result.map((f) => f.id), ...remap.keys()]);
+  for (const f of folders) {
+    if (!seen.has(f.id)) {
+      const { kind: _kind, ...rest } = f;
+      result.push({ ...rest, parentId: null });
+    }
+  }
+
+  const fix = (item) => (remap.has(item.folderId) ? { ...item, folderId: remap.get(item.folderId) } : item);
+  return { notes: notes.map(fix), docs: docs.map(fix), folders: result };
 }
