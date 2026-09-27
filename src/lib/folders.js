@@ -47,3 +47,23 @@ export function folderTree(folders, kind) {
   walk(null, 0);
   return result;
 }
+
+/**
+ * Notes and documents must live inside a folder. Items that are at the top
+ * level (older data) or whose folder no longer exists are moved into a
+ * default folder, which is created only when needed.
+ */
+export function placeInFolders(items, folders, kind, defaultName, createId) {
+  const known = new Set(folders.filter((f) => f.kind === kind).map((f) => f.id));
+  if (items.every((i) => known.has(i.folderId))) return { items, folders };
+
+  let target = folders.find((f) => f.kind === kind && f.parentId === null && f.name === defaultName);
+  const nextFolders = target
+    ? folders
+    : [...folders, (target = { id: createId(), name: defaultName, kind, parentId: null, createdAt: Date.now() })];
+
+  return {
+    items: items.map((i) => (known.has(i.folderId) ? i : { ...i, folderId: target.id })),
+    folders: nextFolders,
+  };
+}

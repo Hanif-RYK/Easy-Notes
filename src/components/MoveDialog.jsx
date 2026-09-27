@@ -26,11 +26,14 @@ export function MoveDialog({ target, folders, folderKind, onClose, onMove }) {
   return (
     <Modal open onClose={onClose} title={`Move "${item.name ?? item.title ?? "Untitled"}"`}>
       <div className="-mx-2 flex flex-col">
-        <button type="button" onClick={() => choose(null)} className={rowClass}>
-          <HomeIcon className="h-5 w-5 shrink-0 text-slate-400" />
-          <span className="flex-1">{folderKind === "doc" ? "Documents" : "Notes"} (top level)</span>
-          {current === null && <Check className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />}
-        </button>
+        {/* Only folders can sit at the top level; notes and documents always live in a folder. */}
+        {kind === "folder" && (
+          <button type="button" onClick={() => choose(null)} className={rowClass}>
+            <HomeIcon className="h-5 w-5 shrink-0 text-slate-400" />
+            <span className="flex-1">{folderKind === "doc" ? "Documents" : "Notes"} (top level)</span>
+            {current === null && <Check className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />}
+          </button>
+        )}
         {options.map(({ folder, depth }) => (
           <button
             key={folder.id}
@@ -46,7 +49,7 @@ export function MoveDialog({ target, folders, folderKind, onClose, onMove }) {
         ))}
         {options.length === 0 && (
           <p className="px-3 py-2 text-xs text-slate-500 dark:text-slate-400">
-            No folders yet. Create one with the + New button.
+            No other folders yet. Create one with the New folder button.
           </p>
         )}
       </div>
