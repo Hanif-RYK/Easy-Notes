@@ -19,7 +19,6 @@ import {
   Search,
   SlidersHorizontal,
   StickyNote,
-  Sun,
   Trash2,
   Upload,
   X,
@@ -288,17 +287,8 @@ export function Home({ tab, folder, notes, docs, folders, profile, theme, action
             <div className="flex items-center gap-1">
               <button
                 type="button"
-                onClick={actions.toggleTheme}
-                className="icon-btn"
-                aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                title={theme === "dark" ? "Light mode" : "Dark mode"}
-              >
-                {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-              </button>
-              <button
-                type="button"
                 onClick={() => setSheet("profile")}
-                className="ml-1 flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600 text-sm font-semibold text-white transition hover:bg-indigo-700 active:scale-95"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600 text-sm font-semibold text-white transition hover:bg-indigo-700 active:scale-95"
                 aria-label="Profile and settings"
               >
                 {initials(profile.name)}
@@ -381,19 +371,19 @@ export function Home({ tab, folder, notes, docs, folders, profile, theme, action
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div className="min-w-0 flex-1">
-              <nav aria-label="Folder path" className="flex items-center gap-1 overflow-hidden text-xs text-slate-500 dark:text-slate-400">
-                <button type="button" onClick={() => openFolder(null)} className="shrink-0 hover:text-indigo-600 dark:hover:text-indigo-400">
-                  {isNotes ? "Notes" : "Documents"}
-                </button>
-                {path.slice(0, -1).map((p) => (
-                  <span key={p.id} className="flex min-w-0 items-center gap-1">
-                    <ChevronRight className="h-3 w-3 shrink-0" />
-                    <button type="button" onClick={() => openFolder(p.id)} className="truncate hover:text-indigo-600 dark:hover:text-indigo-400">
-                      {p.name}
-                    </button>
-                  </span>
-                ))}
-              </nav>
+              {/* Parent folders, shown only for sub-folders */}
+              {path.length > 1 && (
+                <nav aria-label="Folder path" className="flex items-center gap-1 overflow-hidden text-xs text-slate-500 dark:text-slate-400">
+                  {path.slice(0, -1).map((p) => (
+                    <span key={p.id} className="flex min-w-0 items-center gap-1">
+                      <button type="button" onClick={() => openFolder(p.id)} className="truncate hover:text-indigo-600 dark:hover:text-indigo-400">
+                        {p.name}
+                      </button>
+                      <ChevronRight className="h-3 w-3 shrink-0" />
+                    </span>
+                  ))}
+                </nav>
+              )}
               <h2 className="truncate text-lg font-bold text-slate-900 dark:text-white">{folder.name}</h2>
             </div>
             <button
@@ -437,9 +427,6 @@ export function Home({ tab, folder, notes, docs, folders, profile, theme, action
             )}
             {others.length > 0 && (
               <section>
-                {(pinned.length > 0 || visibleFolders.length > 0) && (
-                  <h3 className={sectionTitle}>{isNotes ? "Notes" : "Documents"}</h3>
-                )}
                 <ul className="space-y-2">{others.map(renderItem)}</ul>
               </section>
             )}
