@@ -1,9 +1,14 @@
 import { useMemo, useRef, useState } from "react";
 import {
-  ArrowUpDown,
+  ArrowLeft,
   Camera,
   Check,
+  ChevronRight,
   FileText,
+  Folder,
+  FolderInput,
+  FolderOpen,
+  FolderPlus,
   Image as ImageIcon,
   Moon,
   MoreHorizontal,
@@ -12,15 +17,17 @@ import {
   PinOff,
   Plus,
   Search,
+  SlidersHorizontal,
   StickyNote,
   Sun,
   Trash2,
   Upload,
   X,
 } from "lucide-react";
-import { navigate } from "../hooks/useHashRoute.js";
+import { goBack, navigate } from "../hooks/useHashRoute.js";
 import { ActionSheet, ConfirmDialog, Modal, PromptDialog } from "../components/Modal.jsx";
-import { createId } from "../lib/storage.js";
+import { MoveDialog } from "../components/MoveDialog.jsx";
+import { descendantIds, folderPath } from "../lib/folders.js";
 import { formatDate, formatSize, initials, isImage, isPdf, preview } from "../lib/format.js";
 
 const SORTS = [
@@ -34,6 +41,8 @@ const DOC_FILTERS = [
   { id: "pdf", label: "PDFs" },
   { id: "image", label: "Images" },
 ];
+
+const sectionTitle = "mb-2 px-1 text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400";
 
 function greeting() {
   const hour = new Date().getHours();
@@ -49,69 +58,122 @@ function sortItems(items, sort, getTitle, getDate) {
   return list.sort((a, b) => getDate(b) - getDate(a));
 }
 
-export function Home({ tab, notes, docs, profile, theme, actions }) {
+const itemTitle = (kind, item) => (kind === "note" ? item.title || "Untitled" : item.name);
+
+export function Home({ tab, folder, notes, docs, folders, profile, theme, actions }) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("recent");
   const [docFilter, setDocFilter] = useState("all");
-  const [sheet, setSheet] = useState(null); // "sort" | "add" | "profile" | null
-  const [menuItem, setMenuItem] = useState(null); // { kind, item }
-  const [renaming, setRenaming] = useState(null); // doc | "profile"
+  const [sheet, setSheet] = useState(null); // "filter" | "new" | "profile" | null
+  const [menu, setMenu] = useState(null); // { kind, item } — kind: "note" | "doc" | "folder"
+  const [prompt, setPrompt] = useState(null); // { type, item? }
+  const [moving, setMoving] = useState(null); // { kind, item }
   const [deleting, setDeleting] = useState(null); // { kind, item } | "all"
 
   const fileInput = useRef(null);
   const cameraInput = useRef(null);
 
   const isNotes = tab === "notes";
+  const kind = isNotes ? "note" : "doc";
+  const folderId = folder?.id ?? null;
   const q = query.trim().toLowerCase();
+  const searching = q.length > 0;
+  const filtersActive = sort !== "recent" || (!isNotes && docFilter !== "all");
 
-  const visibleNotes = useMemo(() => {
-    const filtered = q
-      ? notes.filter((n) => n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q))
-      : notes;
-    return sortItems(filtered, sort, (n) => n.title || "Untitled", (n) => n.updatedAt);
-  }, [notes, q, sort]);
+  const tabFolders = useMemo(() => folders.filter((f) => f.kind === kind), [folders, kind]);
+  const allItems = isNotes ? notes : docs;
+  const folderName = useMemo(() => new Map(tabFolders.map((f) => [f.id, f.name])), [tabFolders]);
+  const path = useMemo(() => folderPath(tabFolders, folderId), [tabFolders, folderId]);
 
-  const visibleDocs = useMemo(() => {
-    let filtered = q ? docs.filter((d) => d.name.toLowerCase().includes(q)) : docs;
-    if (docFilter === "pdf") filtered = filtered.filter((d) => isPdf(d.type));
-    if (docFilter === "image") filtered = filtered.filter((d) => isImage(d.type));
-    return sortItems(filtered, sort, (d) => d.name, (d) => d.createdAt);
-  }, [docs, q, sort, docFilter]);
+  // While searching we look through every folder; otherwise only the open one.
+  const visibleFolders = useMemo(() => {
+    const list = searching
+      ? tabFolders.filter((f) => f.name.toLowerCase().includes(q))
+      : tabFolders.filter((f) => (f.parentId ?? null) === folderId);
+    return sortItems(list, sort, (f) => f.name, (f) => f.createdAt);
+  }, [tabFolders, searching, q, folderId, sort]);
 
-  const items = isNotes ? visibleNotes : visibleDocs;
-  const pinned = items.filter((i) => i.pinned);
-  const others = items.filter((i) => !i.pinned);
+  const visibleItems = useMemo(() => {
+    let list = searching
+      ? allItems.filter((i) =>
+          isNotes
+            ? i.title.toLowerCase().includes(q) || i.body.toLowerCase().includes(q)
+            : i.name.toLowerCase().includes(q),
+        )
+      : allItems.filter((i) => (i.folderId ?? null) === folderId);
+    if (!isNotes && docFilter === "pdf") list = list.filter((d) => isPdf(d.type));
+    if (!isNotes && docFilter === "image") list = list.filter((d) => isImage(d.type));
+    return isNotes
+      ? sortItems(list, sort, (n) => n.title || "Untitled", (n) => n.updatedAt)
+      : sortItems(list, sort, (d) => d.name, (d) => d.createdAt);
+  }, [allItems, isNotes, searching, q, folderId, docFilter, sort]);
 
-  const openItem = (kind, item) => navigate(`${kind}/${item.id}`);
+  const pinned = visibleItems.filter((i) => i.pinned);
+  const others = visibleItems.filter((i) => !i.pinned);
 
-  const addNew = () => {
-    if (isNotes) navigate(`note/${createId()}`);
-    else setSheet("add");
-  };
+  const countInside = (id) =>
+    tabFolders.filter((f) => f.parentId === id).length + allItems.filter((i) => i.folderId === id).length;
+
+  const openFolder = (id) => navigate(id ? `${tab}/${id}` : tab);
+  const leaveFolder = () => goBack(folder?.parentId ? `${tab}/${folder.parentId}` : tab);
 
   const onFilesPicked = (e) => {
-    actions.addFiles(e.target.files);
+    actions.addFiles(e.target.files, folderId);
     e.target.value = ""; // allow picking the same file again
   };
 
-  const renderRow = (item) => {
-    const kind = isNotes ? "note" : "doc";
-    const title = isNotes ? item.title || "Untitled" : item.name;
+  // ---- Rows --------------------------------------------------------------
+  const rowClass =
+    "flex items-center rounded-2xl border border-slate-200/70 bg-white transition hover:border-slate-300 hover:shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700";
+
+  const renderFolder = (f) => {
+    const count = countInside(f.id);
+    return (
+      <li key={f.id} className={rowClass}>
+        <button
+          type="button"
+          onClick={() => openFolder(f.id)}
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl p-3.5 text-left"
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-500 dark:bg-amber-500/15 dark:text-amber-300">
+            <Folder className="h-5 w-5 fill-current/25" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold text-slate-900 dark:text-white">{f.name}</span>
+            <span className="mt-0.5 block truncate text-xs text-slate-500 dark:text-slate-400">
+              {searching && f.parentId ? `in ${folderName.get(f.parentId)} · ` : ""}
+              {count === 0 ? "Empty" : `${count} ${count === 1 ? "item" : "items"}`}
+            </span>
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 dark:text-slate-600" />
+        </button>
+        <button
+          type="button"
+          onClick={() => setMenu({ kind: "folder", item: f })}
+          className="icon-btn mr-2 text-slate-400"
+          aria-label={`Options for folder ${f.name}`}
+        >
+          <MoreHorizontal className="h-5 w-5" />
+        </button>
+      </li>
+    );
+  };
+
+  const renderItem = (item) => {
+    const title = itemTitle(kind, item);
     const Icon = isNotes ? StickyNote : isImage(item.type) ? ImageIcon : FileText;
     const iconColor = isNotes
       ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300"
       : isImage(item.type)
         ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300"
         : "bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300";
+    const location = searching && item.folderId ? `in ${folderName.get(item.folderId)} · ` : "";
 
     return (
-      <li
-        key={item.id}
-        className="group flex items-center rounded-2xl border border-slate-200/70 bg-white transition hover:border-slate-300 hover:shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700"
-      >
+      <li key={item.id} className={rowClass}>
         <button
           type="button"
-          onClick={() => openItem(kind, item)}
+          onClick={() => navigate(`${kind}/${item.id}`)}
           className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl p-3.5 text-left"
         >
           <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconColor}`}>
@@ -123,6 +185,7 @@ export function Home({ tab, notes, docs, profile, theme, actions }) {
               {item.pinned && <Pin className="h-3.5 w-3.5 shrink-0 fill-current text-amber-500" aria-label="Pinned" />}
             </span>
             <span className="mt-0.5 block truncate text-xs text-slate-500 dark:text-slate-400">
+              {location}
               {isNotes
                 ? `${formatDate(item.updatedAt)} · ${preview(item.body)}`
                 : `${formatDate(item.createdAt)} · ${formatSize(item.size)}`}
@@ -131,7 +194,7 @@ export function Home({ tab, notes, docs, profile, theme, actions }) {
         </button>
         <button
           type="button"
-          onClick={() => setMenuItem({ kind, item })}
+          onClick={() => setMenu({ kind, item })}
           className="icon-btn mr-2 text-slate-400"
           aria-label={`Options for ${title}`}
         >
@@ -141,22 +204,82 @@ export function Home({ tab, notes, docs, profile, theme, actions }) {
     );
   };
 
-  const menuActions = menuItem
-    ? [
-        {
-          label: menuItem.item.pinned ? "Unpin" : "Pin to top",
-          icon: menuItem.item.pinned ? PinOff : Pin,
-          onClick: () => actions.togglePin(menuItem.kind, menuItem.item.id),
-        },
-        ...(menuItem.kind === "doc"
-          ? [{ label: "Rename", icon: Pencil, onClick: () => setRenaming(menuItem.item) }]
-          : [{ label: "Edit", icon: Pencil, onClick: () => openItem("note", menuItem.item) }]),
-        { label: "Delete", icon: Trash2, danger: true, onClick: () => setDeleting(menuItem) },
-      ]
-    : [];
+  // ---- Menus -------------------------------------------------------------
+  const menuActions = !menu
+    ? []
+    : menu.kind === "folder"
+      ? [
+          { label: "Open", icon: FolderOpen, onClick: () => openFolder(menu.item.id) },
+          { label: "Rename", icon: Pencil, onClick: () => setPrompt({ type: "renameFolder", item: menu.item }) },
+          { label: "Move to folder", icon: FolderInput, onClick: () => setMoving(menu) },
+          { label: "Delete", icon: Trash2, danger: true, onClick: () => setDeleting(menu) },
+        ]
+      : [
+          {
+            label: menu.item.pinned ? "Unpin" : "Pin to top",
+            icon: menu.item.pinned ? PinOff : Pin,
+            onClick: () => actions.togglePin(menu.kind, menu.item.id),
+          },
+          menu.kind === "doc"
+            ? { label: "Rename", icon: Pencil, onClick: () => setPrompt({ type: "renameDoc", item: menu.item }) }
+            : { label: "Edit", icon: Pencil, onClick: () => navigate(`note/${menu.item.id}`) },
+          { label: "Move to folder", icon: FolderInput, onClick: () => setMoving(menu) },
+          { label: "Delete", icon: Trash2, danger: true, onClick: () => setDeleting(menu) },
+        ];
+
+  const newActions = [
+    ...(isNotes
+      ? [{ label: "New note", icon: StickyNote, onClick: () => actions.newNote(folderId) }]
+      : [
+          { label: "Upload PDF or image", icon: Upload, onClick: () => fileInput.current?.click() },
+          { label: "Take a photo", icon: Camera, onClick: () => cameraInput.current?.click() },
+        ]),
+    {
+      label: folder ? `New folder in "${folder.name}"` : "New folder",
+      icon: FolderPlus,
+      onClick: () => setPrompt({ type: "newFolder" }),
+    },
+  ];
+
+  const promptConfig = {
+    newFolder: { title: "New folder", label: "Folder name", initial: "", submit: "Create" },
+    renameFolder: { title: "Rename folder", label: "Folder name", initial: prompt?.item?.name, submit: "Save" },
+    renameDoc: { title: "Rename document", label: "Document name", initial: prompt?.item?.name, submit: "Save" },
+    profile: { title: "Your name", label: "Name", initial: profile.name, submit: "Save" },
+  }[prompt?.type ?? "newFolder"];
+
+  const submitPrompt = (value) => {
+    if (prompt.type === "newFolder") actions.createFolder(kind, value, folderId);
+    else if (prompt.type === "renameFolder") actions.renameFolder(prompt.item.id, value);
+    else if (prompt.type === "renameDoc") actions.renameDoc(prompt.item.id, value);
+    else actions.renameProfile(value);
+  };
+
+  const deleteMessage = () => {
+    if (deleting === "all") return "All notes, documents, folders and settings on this device will be permanently removed.";
+    if (!deleting) return "";
+    if (deleting.kind !== "folder") return `"${itemTitle(deleting.kind, deleting.item)}" will be permanently deleted.`;
+    const ids = descendantIds(folders, deleting.item.id);
+    const inside = allItems.filter((i) => ids.has(i.folderId)).length + ids.size - 1;
+    return inside > 0
+      ? `"${deleting.item.name}" and everything inside it (${inside} ${inside === 1 ? "item" : "items"}) will be permanently deleted.`
+      : `"${deleting.item.name}" will be permanently deleted.`;
+  };
+
+  const confirmDelete = () => {
+    if (deleting === "all") return actions.resetApp();
+    const { kind: k, item } = deleting;
+    if (k === "folder") {
+      // If the open folder is being deleted, go back to where it was.
+      const openIsInside = folderId && descendantIds(folders, item.id).has(folderId);
+      actions.removeFolder(item.id);
+      if (openIsInside) navigate(item.parentId ? `${tab}/${item.parentId}` : tab, { replace: true });
+    } else if (k === "doc") actions.removeDoc(item.id);
+    else actions.removeNote(item.id);
+  };
 
   const totalPinned = notes.filter((n) => n.pinned).length + docs.filter((d) => d.pinned).length;
-  const displayName = profile.name || "there";
+  const isEmpty = visibleFolders.length === 0 && visibleItems.length === 0;
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -166,7 +289,7 @@ export function Home({ tab, notes, docs, profile, theme, actions }) {
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">
-                {greeting()}, {displayName}
+                {greeting()}, {profile.name || "there"}
               </p>
               <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Easy Notes</h1>
             </div>
@@ -191,112 +314,141 @@ export function Home({ tab, notes, docs, profile, theme, actions }) {
             </div>
           </div>
 
-          {/* Search */}
-          <div className="relative mt-4">
-            <Search className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={isNotes ? "Search notes" : "Search documents"}
-              aria-label="Search"
-              className="input pr-10 pl-10 [&::-webkit-search-cancel-button]:hidden"
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={() => setQuery("")}
-                className="absolute top-1/2 right-2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700"
-                aria-label="Clear search"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-
-          {/* Tabs + sort */}
-          <div className="mt-3 flex items-center gap-2">
-            <div role="tablist" className="flex flex-1 rounded-xl bg-slate-200/60 p-1 dark:bg-slate-800/80">
-              {[
-                { id: "notes", label: "Notes", count: notes.length },
-                { id: "docs", label: "Documents", count: docs.length },
-              ].map((t) => (
+          {/* Search + filter */}
+          <div className="mt-4 flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={isNotes ? "Search all notes" : "Search all documents"}
+                aria-label="Search"
+                className="input pr-10 pl-10 [&::-webkit-search-cancel-button]:hidden"
+              />
+              {query && (
                 <button
-                  key={t.id}
                   type="button"
-                  role="tab"
-                  aria-selected={tab === t.id}
-                  onClick={() => navigate(t.id, { replace: true })}
-                  className={`flex-1 rounded-lg py-2 text-sm font-semibold transition ${
-                    tab === t.id
-                      ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white"
-                      : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                  }`}
+                  onClick={() => setQuery("")}
+                  className="absolute top-1/2 right-2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700"
+                  aria-label="Clear search"
                 >
-                  {t.label}
-                  <span className="ml-1.5 text-xs font-medium text-slate-400">{t.count}</span>
+                  <X className="h-4 w-4" />
                 </button>
-              ))}
+              )}
             </div>
             <button
               type="button"
-              onClick={() => setSheet("sort")}
-              className={`icon-btn h-11 w-11 rounded-xl border ${
-                sort !== "recent"
+              onClick={() => setSheet("filter")}
+              className={`icon-btn relative h-11 w-11 rounded-xl border ${
+                filtersActive
                   ? "border-indigo-300 bg-indigo-50 text-indigo-600 dark:border-indigo-500/50 dark:bg-indigo-500/15 dark:text-indigo-300"
                   : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"
               }`}
-              aria-label="Sort"
-              title="Sort"
+              aria-label={filtersActive ? "Filter and sort (active)" : "Filter and sort"}
+              title="Filter & sort"
             >
-              <ArrowUpDown className="h-4 w-4" />
+              <SlidersHorizontal className="h-4 w-4" />
+              {filtersActive && (
+                <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-indigo-600 ring-2 ring-white dark:bg-indigo-400 dark:ring-slate-800" />
+              )}
             </button>
+          </div>
+
+          {/* Tabs */}
+          <div role="tablist" className="mt-3 flex rounded-xl bg-slate-200/60 p-1 dark:bg-slate-800/80">
+            {[
+              { id: "notes", label: "Notes", count: notes.length },
+              { id: "docs", label: "Documents", count: docs.length },
+            ].map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={tab === t.id}
+                onClick={() => navigate(t.id, { replace: true })}
+                className={`flex-1 rounded-lg py-2 text-sm font-semibold transition ${
+                  tab === t.id
+                    ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white"
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                }`}
+              >
+                {t.label}
+                <span className="ml-1.5 text-xs font-medium text-slate-400">{t.count}</span>
+              </button>
+            ))}
           </div>
         </div>
       </header>
 
-      {/* List */}
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 pt-4 pb-32 sm:px-6">
-        {!isNotes && docs.length > 0 && (
-          <div className="mb-4 flex gap-2">
-            {DOC_FILTERS.map((f) => (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => setDocFilter(f.id)}
-                aria-pressed={docFilter === f.id}
-                className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition ${
-                  docFilter === f.id
-                    ? "border-indigo-600 bg-indigo-600 text-white"
-                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
+        {/* Open folder: back button, breadcrumb and folder options */}
+        {folder && !searching && (
+          <div className="mb-4 flex items-center gap-1">
+            <button type="button" onClick={leaveFolder} className="icon-btn -ml-2" aria-label="Back">
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div className="min-w-0 flex-1">
+              <nav aria-label="Folder path" className="flex items-center gap-1 overflow-hidden text-xs text-slate-500 dark:text-slate-400">
+                <button type="button" onClick={() => openFolder(null)} className="shrink-0 hover:text-indigo-600 dark:hover:text-indigo-400">
+                  {isNotes ? "Notes" : "Documents"}
+                </button>
+                {path.slice(0, -1).map((p) => (
+                  <span key={p.id} className="flex min-w-0 items-center gap-1">
+                    <ChevronRight className="h-3 w-3 shrink-0" />
+                    <button type="button" onClick={() => openFolder(p.id)} className="truncate hover:text-indigo-600 dark:hover:text-indigo-400">
+                      {p.name}
+                    </button>
+                  </span>
+                ))}
+              </nav>
+              <h2 className="truncate text-lg font-bold text-slate-900 dark:text-white">{folder.name}</h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => setMenu({ kind: "folder", item: folder })}
+              className="icon-btn"
+              aria-label="Folder options"
+            >
+              <MoreHorizontal className="h-5 w-5" />
+            </button>
           </div>
         )}
 
-        {items.length === 0 ? (
-          <EmptyState isNotes={isNotes} query={query} filtered={!isNotes && docFilter !== "all"} onAdd={addNew} />
+        {searching && (
+          <p className="mb-3 px-1 text-xs text-slate-500 dark:text-slate-400">
+            Results in all {isNotes ? "notes" : "documents"}
+          </p>
+        )}
+
+        {isEmpty ? (
+          <EmptyState
+            isNotes={isNotes}
+            query={query}
+            inFolder={!!folder}
+            filtered={!isNotes && docFilter !== "all"}
+            onAdd={() => setSheet("new")}
+          />
         ) : (
           <div className="space-y-6">
+            {visibleFolders.length > 0 && (
+              <section>
+                <h3 className={sectionTitle}>Folders</h3>
+                <ul className="space-y-2">{visibleFolders.map(renderFolder)}</ul>
+              </section>
+            )}
             {pinned.length > 0 && (
               <section>
-                <h2 className="mb-2 px-1 text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400">
-                  Pinned
-                </h2>
-                <ul className="space-y-2">{pinned.map(renderRow)}</ul>
+                <h3 className={sectionTitle}>Pinned</h3>
+                <ul className="space-y-2">{pinned.map(renderItem)}</ul>
               </section>
             )}
             {others.length > 0 && (
               <section>
-                {pinned.length > 0 && (
-                  <h2 className="mb-2 px-1 text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400">
-                    Others
-                  </h2>
+                {(pinned.length > 0 || visibleFolders.length > 0) && (
+                  <h3 className={sectionTitle}>{isNotes ? "Notes" : "Documents"}</h3>
                 )}
-                <ul className="space-y-2">{others.map(renderRow)}</ul>
+                <ul className="space-y-2">{others.map(renderItem)}</ul>
               </section>
             )}
           </div>
@@ -308,11 +460,11 @@ export function Home({ tab, notes, docs, profile, theme, actions }) {
         <div className="mx-auto flex max-w-3xl justify-end px-4 sm:px-6">
           <button
             type="button"
-            onClick={addNew}
+            onClick={() => setSheet("new")}
             className="btn-primary pointer-events-auto h-14 rounded-full px-6 shadow-lg shadow-indigo-600/30"
           >
             <Plus className="h-5 w-5" strokeWidth={2.5} />
-            {isNotes ? "New note" : "Add document"}
+            New
           </button>
         </div>
       </div>
@@ -321,16 +473,15 @@ export function Home({ tab, notes, docs, profile, theme, actions }) {
       <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={onFilesPicked} />
 
       {/* Sheets & dialogs */}
-      <Modal open={sheet === "sort"} onClose={() => setSheet(null)} title="Sort by">
+      <Modal open={sheet === "filter"} onClose={() => setSheet(null)} title="Filter & sort">
+        <h3 className={sectionTitle}>Sort by</h3>
         <div className="-mx-2 flex flex-col">
           {SORTS.map((s) => (
             <button
               key={s.id}
               type="button"
-              onClick={() => {
-                setSort(s.id);
-                setSheet(null);
-              }}
+              onClick={() => setSort(s.id)}
+              aria-pressed={sort === s.id}
               className="flex items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
             >
               {s.label}
@@ -338,51 +489,85 @@ export function Home({ tab, notes, docs, profile, theme, actions }) {
             </button>
           ))}
         </div>
+
+        {!isNotes && (
+          <>
+            <h3 className={`${sectionTitle} mt-4`}>File type</h3>
+            <div className="flex gap-2">
+              {DOC_FILTERS.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setDocFilter(f.id)}
+                  aria-pressed={docFilter === f.id}
+                  className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold transition ${
+                    docFilter === f.id
+                      ? "border-indigo-600 bg-indigo-600 text-white"
+                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        <div className="mt-6 flex gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setSort("recent");
+              setDocFilter("all");
+            }}
+            className="btn-secondary flex-1"
+          >
+            Reset
+          </button>
+          <button type="button" onClick={() => setSheet(null)} className="btn-primary flex-1">
+            Done
+          </button>
+        </div>
       </Modal>
 
-      <ActionSheet
-        open={sheet === "add"}
-        onClose={() => setSheet(null)}
-        title="Add document"
-        actions={[
-          { label: "Upload PDF or image", icon: Upload, onClick: () => fileInput.current?.click() },
-          { label: "Take a photo", icon: Camera, onClick: () => cameraInput.current?.click() },
-        ]}
-      />
+      <ActionSheet open={sheet === "new"} onClose={() => setSheet(null)} title="Create new" actions={newActions} />
 
       <ActionSheet
-        open={!!menuItem}
-        onClose={() => setMenuItem(null)}
-        title={menuItem ? (menuItem.kind === "note" ? menuItem.item.title || "Untitled" : menuItem.item.name) : ""}
+        open={!!menu}
+        onClose={() => setMenu(null)}
+        title={menu ? (menu.kind === "folder" ? menu.item.name : itemTitle(menu.kind, menu.item)) : ""}
         actions={menuActions}
       />
 
+      <MoveDialog
+        target={moving}
+        folders={folders}
+        folderKind={kind}
+        onClose={() => setMoving(null)}
+        onMove={(targetId) => actions.moveItem(moving.kind, moving.item.id, targetId)}
+      />
+
       <PromptDialog
-        open={!!renaming}
-        onClose={() => setRenaming(null)}
-        title={renaming === "profile" ? "Your name" : "Rename document"}
-        label={renaming === "profile" ? "Name" : "Document name"}
-        initialValue={renaming === "profile" ? profile.name : renaming?.name}
-        onSubmit={(value) =>
-          renaming === "profile" ? actions.renameProfile(value) : actions.renameDoc(renaming.id, value)
-        }
+        open={!!prompt}
+        onClose={() => setPrompt(null)}
+        title={promptConfig.title}
+        label={promptConfig.label}
+        initialValue={promptConfig.initial ?? ""}
+        submitLabel={promptConfig.submit}
+        onSubmit={submitPrompt}
       />
 
       <ConfirmDialog
         open={!!deleting}
         onClose={() => setDeleting(null)}
-        title={deleting === "all" ? "Delete all data?" : `Delete this ${deleting?.kind === "doc" ? "document" : "note"}?`}
-        message={
+        title={
           deleting === "all"
-            ? "All notes, documents and settings on this device will be permanently removed."
-            : `"${deleting?.kind === "doc" ? deleting.item.name : deleting?.item.title || "Untitled"}" will be permanently deleted.`
+            ? "Delete all data?"
+            : `Delete this ${{ doc: "document", note: "note", folder: "folder" }[deleting?.kind] ?? "item"}?`
         }
+        message={deleteMessage()}
         confirmLabel={deleting === "all" ? "Delete everything" : "Delete"}
-        onConfirm={() => {
-          if (deleting === "all") actions.resetApp();
-          else if (deleting.kind === "doc") actions.removeDoc(deleting.item.id);
-          else actions.removeNote(deleting.item.id);
-        }}
+        onConfirm={confirmDelete}
       />
 
       <Modal open={sheet === "profile"} onClose={() => setSheet(null)} title="Profile & settings">
@@ -398,7 +583,7 @@ export function Home({ tab, notes, docs, profile, theme, actions }) {
             type="button"
             onClick={() => {
               setSheet(null);
-              setRenaming("profile");
+              setPrompt({ type: "profile" });
             }}
             className="icon-btn"
             aria-label="Edit name"
@@ -407,10 +592,11 @@ export function Home({ tab, notes, docs, profile, theme, actions }) {
           </button>
         </div>
 
-        <dl className="mt-5 grid grid-cols-3 gap-2 text-center">
+        <dl className="mt-5 grid grid-cols-4 gap-2 text-center">
           {[
             ["Notes", notes.length],
-            ["Documents", docs.length],
+            ["Docs", docs.length],
+            ["Folders", folders.length],
             ["Pinned", totalPinned],
           ].map(([label, value]) => (
             <div key={label} className="rounded-xl bg-slate-100 py-3 dark:bg-slate-800">
@@ -451,8 +637,8 @@ export function Home({ tab, notes, docs, profile, theme, actions }) {
   );
 }
 
-function EmptyState({ isNotes, query, filtered, onAdd }) {
-  const Icon = query ? Search : isNotes ? StickyNote : FileText;
+function EmptyState({ isNotes, query, inFolder, filtered, onAdd }) {
+  const Icon = query ? Search : inFolder ? FolderOpen : isNotes ? StickyNote : FileText;
   let title = isNotes ? "No notes yet" : "No documents yet";
   let text = isNotes ? "Write down your first idea." : "Keep your PDFs and photos safe in one place.";
 
@@ -461,7 +647,10 @@ function EmptyState({ isNotes, query, filtered, onAdd }) {
     text = `Nothing matches "${query.trim()}".`;
   } else if (filtered) {
     title = "Nothing here";
-    text = "No documents of this type yet.";
+    text = "No documents of this type here.";
+  } else if (inFolder) {
+    title = "This folder is empty";
+    text = isNotes ? "Add a note or a folder here." : "Add a document or a folder here.";
   }
 
   return (
@@ -474,7 +663,7 @@ function EmptyState({ isNotes, query, filtered, onAdd }) {
       {!query && !filtered && (
         <button type="button" onClick={onAdd} className="btn-secondary mt-5">
           <Plus className="h-4 w-4" />
-          {isNotes ? "New note" : "Add document"}
+          Add something
         </button>
       )}
     </div>

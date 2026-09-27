@@ -6,6 +6,7 @@ Everything is stored privately in the browser on your device — no account or s
 ## Features
 
 - Notes with autosave, search, sort and pin-to-top
+- Folders and sub-folders (any depth) for notes and documents, with move, rename and delete
 - Upload PDFs and images (or take a photo on mobile), then view, rename, share or download them
 - Print / save a note as PDF
 - Light and dark mode
@@ -31,9 +32,9 @@ src/
   App.jsx               app state, data actions and routing
   index.css             Tailwind CSS setup and shared styles
   screens/              Welcome, Home, NoteEditor, DocViewer
-  components/           Modal / dialogs, Toast, Logo
+  components/           Modal / dialogs, MoveDialog, Toast, Logo
   hooks/useHashRoute.js tiny hash-based router
-  lib/                  localStorage, IndexedDB and formatting helpers
+  lib/                  localStorage, IndexedDB, folder and formatting helpers
 ```
 
 ## Deployment

@@ -4,6 +4,7 @@
 const KEYS = {
   notes: "easy_notes_notes",
   docs: "easy_notes_docs",
+  folders: "easy_notes_folders",
   profile: "easy_notes_profile",
   theme: "easy_notes_theme",
 };
@@ -39,12 +40,13 @@ function welcomeNote() {
     body: [
       "A few tips to get started:",
       "",
-      "• Tap the + button to write a new note. It saves automatically.",
+      "• Tap + New to write a note or create a folder. Notes save automatically.",
       "• Switch to Documents to keep PDFs and photos in one place.",
-      "• Use the ⋯ menu to pin an item to the top or delete it.",
+      "• Use the ⋯ menu to pin, move to a folder or delete an item.",
       "• Everything stays private on this device.",
     ].join("\n"),
     pinned: false,
+    folderId: null,
     createdAt: now,
     updatedAt: now,
   };
@@ -63,6 +65,13 @@ export function loadDocs() {
 }
 
 export const saveDocs = (docs) => write(KEYS.docs, docs);
+
+export function loadFolders() {
+  const folders = read(KEYS.folders, []);
+  return Array.isArray(folders) ? folders : [];
+}
+
+export const saveFolders = (folders) => write(KEYS.folders, folders);
 
 export const loadProfile = () => read(KEYS.profile, null);
 export const saveProfile = (profile) => write(KEYS.profile, profile);
@@ -86,7 +95,7 @@ export function saveTheme(theme) {
 }
 
 export function clearAppData() {
-  for (const key of [KEYS.notes, KEYS.docs, KEYS.profile]) {
+  for (const key of [KEYS.notes, KEYS.docs, KEYS.folders, KEYS.profile]) {
     try {
       localStorage.removeItem(key);
     } catch {
