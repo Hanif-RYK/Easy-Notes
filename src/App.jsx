@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { navigate, useHashRoute } from "./hooks/useHashRoute.js";
+import { usePersist } from "./hooks/usePersist.js";
 import { useToast } from "./components/Toast.jsx";
 import { clearFiles, deleteFile, putFile } from "./lib/fileStore.js";
 import { descendantIds, placeInFolders } from "./lib/folders.js";
@@ -47,17 +48,14 @@ export default function App() {
   const newNoteFolders = useRef(new Map());
 
   // ---- Persistence -------------------------------------------------------
-  useEffect(() => {
-    if (profile && !saveNotes(notes)) toast("Couldn't save — device storage is full");
-  }, [notes, profile, toast]);
-
-  useEffect(() => {
-    if (profile) saveDocs(docs);
-  }, [docs, profile]);
-
-  useEffect(() => {
-    if (profile) saveFolders(folders);
-  }, [folders, profile]);
+  // Writes are batched (see usePersist) so typing in a note stays smooth.
+  const persistNotes = useCallback(
+    (value) => !saveNotes(value) && toast("Couldn't save — device storage is full"),
+    [toast],
+  );
+  usePersist(notes, persistNotes, !!profile);
+  usePersist(docs, saveDocs, !!profile);
+  usePersist(folders, saveFolders, !!profile);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
