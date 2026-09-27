@@ -1,5 +1,5 @@
-import { clearFiles, clearRecords, deleteFile, loadAll, writeChanges } from "./db.js";
-import { mergeDuplicateFolders, placeInFolders } from "./folders.js";
+import { deleteFile, loadAll, writeChanges } from "./db.js";
+import { placeInFolders, splitFoldersByKind } from "./folders.js";
 import { applyJournal, clearJournal, diff } from "./persistence.js";
 import { purgeTrash } from "./trash.js";
 
@@ -77,7 +77,7 @@ const asArray = (value) => (Array.isArray(value) ? value : []);
  * Loads all data and brings it up to date:
  * - moves data from older localStorage versions into IndexedDB
  * - re-applies writes that did not finish last time (journal)
- * - merges the old separate note/document folders into shared folders
+ * - gives shared folders (from one older version) separate Notes/Documents copies
  * - puts notes/documents without a folder into a default folder
  * - permanently removes items that have been in the Trash for 30 days
  */
@@ -95,10 +95,10 @@ export async function loadData() {
   if (hasLegacy && storedIsEmpty) data = legacy;
 
   data = applyJournal(data).data;
-  data = mergeDuplicateFolders(data);
+  data = splitFoldersByKind(data, createId);
 
-  const notes = placeInFolders(data.notes, data.folders, "My Notes", createId);
-  const docs = placeInFolders(data.docs, notes.folders, "My Documents", createId);
+  const notes = placeInFolders(data.notes, data.folders, "note", "My Notes", createId);
+  const docs = placeInFolders(data.docs, notes.folders, "doc", "My Documents", createId);
   data = { notes: notes.items, docs: docs.items, folders: docs.folders };
 
   const purged = purgeTrash(data, { onlyExpired: true });
@@ -115,14 +115,6 @@ export async function loadData() {
   remove(KEYS.legacyFolders);
 
   return data;
-}
-
-export async function clearAppData() {
-  clearJournal();
-  for (const key of [KEYS.profile, KEYS.lastBackup, KEYS.legacyNotes, KEYS.legacyDocs, KEYS.legacyFolders]) {
-    remove(key);
-  }
-  await Promise.all([clearRecords(), clearFiles()]);
 }
 
 /** Asks the browser not to delete our data when space runs low. */

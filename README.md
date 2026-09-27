@@ -5,7 +5,7 @@ Everything is stored privately in the browser on your device — no account or s
 
 ## Features
 
-- Folders and sub-folders (any depth), shared by notes and documents
+- Folders and sub-folders (any depth); Notes and Documents each have their own folders
 - Notes with autosave, search, sort and pin-to-top; share or print / save as PDF
 - Upload PDFs and images (or take a photo on mobile); PDFs are shown inside the app on every device
 - Trash: deleted items can be restored for 30 days (and there's an Undo right after deleting)
@@ -35,8 +35,8 @@ src/
   main.jsx              app bootstrap
   App.jsx               app state, data actions and routing
   index.css             Tailwind CSS setup and shared styles
-  screens/              Welcome, Home, NoteEditor, DocViewer, Settings, Trash
-  components/           Modal / dialogs, MoveDialog, PdfPreview, Toast, Logo
+  screens/              Welcome, Home, NoteEditor, DocViewer, Settings, Trash, LoadingScreen
+  components/           Modal / dialogs, MoveDialog, PdfPreview, Toast, UpdateNotifier, ErrorBoundary, Logo
   hooks/useHashRoute.js tiny hash-based router
   lib/
     db.js               IndexedDB (notes, documents, folders and files)

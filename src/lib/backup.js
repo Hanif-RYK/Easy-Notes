@@ -1,4 +1,4 @@
-import { mergeDuplicateFolders, placeInFolders } from "./folders.js";
+import { KINDS, placeInFolders, splitFoldersByKind } from "./folders.js";
 
 // A backup is one JSON file with all folders, notes and documents.
 // Document files are embedded as base64 "data:" URLs so a single file is
@@ -68,6 +68,7 @@ export function parseBackup(text) {
     .map((f) => ({
       id: f.id,
       name: f.name.slice(0, 120),
+      kind: KINDS.includes(f.kind) ? f.kind : undefined, // missing in backups from the shared-folders version
       parentId: isString(f.parentId) ? f.parentId : null,
       createdAt: isTime(f.createdAt) ? f.createdAt : Date.now(),
       deletedAt: optionalTime(f.deletedAt),
@@ -101,8 +102,8 @@ export function parseBackup(text) {
       data: d.data,
     }));
 
-  // Drop undefined deletedAt so records stay clean.
-  const clean = (r) => (r.deletedAt === undefined ? (({ deletedAt: _d, ...rest }) => rest)(r) : r);
+  // Drop undefined optional fields so records stay clean.
+  const clean = (r) => Object.fromEntries(Object.entries(r).filter(([, v]) => v !== undefined));
   return { folders: folders.map(clean), notes: notes.map(clean), docs: docs.map(clean) };
 }
 
@@ -117,13 +118,16 @@ export function mergeBackup(current, backup, createId) {
     return [...map.values()];
   };
   const docsMeta = backup.docs.map(({ data: _data, ...meta }) => meta);
-  let data = mergeDuplicateFolders({
-    folders: merge(current.folders, backup.folders),
-    notes: merge(current.notes, backup.notes),
-    docs: merge(current.docs, docsMeta),
-  });
-  const notes = placeInFolders(data.notes, data.folders, "My Notes", createId);
-  const docs = placeInFolders(data.docs, notes.folders, "My Documents", createId);
+  let data = splitFoldersByKind(
+    {
+      folders: merge(current.folders, backup.folders),
+      notes: merge(current.notes, backup.notes),
+      docs: merge(current.docs, docsMeta),
+    },
+    createId,
+  );
+  const notes = placeInFolders(data.notes, data.folders, "note", "My Notes", createId);
+  const docs = placeInFolders(data.docs, notes.folders, "doc", "My Documents", createId);
   data = { notes: notes.items, docs: docs.items, folders: docs.folders };
   return data;
 }

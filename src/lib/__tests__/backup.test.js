@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 import { backupFileName, createBackup, mergeBackup, parseBackup } from "../backup.js";
 
 const data = {
-  folders: [{ id: "f", name: "Work", parentId: null, createdAt: 1 }],
+  folders: [
+    { id: "f", name: "Work", kind: "note", parentId: null, createdAt: 1 },
+    { id: "fd", name: "Work", kind: "doc", parentId: null, createdAt: 1 },
+  ],
   notes: [{ id: "n", title: "Hi", body: "Text", pinned: true, folderId: "f", createdAt: 1, updatedAt: 2 }],
-  docs: [{ id: "d", name: "a.pdf", type: "application/pdf", size: 3, pinned: false, folderId: "f", createdAt: 1 }],
+  docs: [{ id: "d", name: "a.pdf", type: "application/pdf", size: 3, pinned: false, folderId: "fd", createdAt: 1 }],
 };
 
 describe("backup", () => {
@@ -43,18 +46,25 @@ describe("backup", () => {
 
   it("merges a backup into existing data", () => {
     const current = {
-      folders: [{ id: "f2", name: "Work", parentId: null, createdAt: 5 }],
+      folders: [{ id: "f2", name: "Home", kind: "note", parentId: null, createdAt: 5 }],
       notes: [{ id: "n", title: "Old", body: "", folderId: "f2", createdAt: 1, updatedAt: 1 }],
       docs: [],
     };
     const backup = { folders: data.folders, notes: data.notes, docs: [{ ...data.docs[0], data: "data:" }] };
     const merged = mergeBackup(current, backup, () => "new");
-    // Same-named folders are merged, the backup's note wins, docs lose their data.
-    expect(merged.folders).toHaveLength(1);
+    // Folders are added, the backup's version of the same note wins, docs lose their data.
+    expect(merged.folders.map((f) => f.id).sort()).toEqual(["f", "f2", "fd"]);
     expect(merged.notes).toHaveLength(1);
-    expect(merged.notes[0].title).toBe("Hi");
-    expect(merged.notes[0].folderId).toBe(merged.folders[0].id);
+    expect(merged.notes[0]).toMatchObject({ title: "Hi", folderId: "f" });
+    expect(merged.docs[0]).toMatchObject({ folderId: "fd" });
     expect(merged.docs[0]).not.toHaveProperty("data");
+  });
+
+  it("gives folders from a shared-folders backup a Notes or Documents kind", () => {
+    const shared = { ...data, folders: [{ id: "s", name: "Work", parentId: null, createdAt: 1 }] };
+    const backup = { folders: shared.folders, notes: [{ ...data.notes[0], folderId: "s" }], docs: [] };
+    const merged = mergeBackup({ folders: [], notes: [], docs: [] }, backup, () => "new");
+    expect(merged.folders).toEqual([{ id: "s", name: "Work", kind: "note", parentId: null, createdAt: 1 }]);
   });
 
   it("names the file with the date", () => {

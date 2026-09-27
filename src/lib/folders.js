@@ -1,6 +1,9 @@
-// Helpers for nested folders. A folder is { id, name, parentId, createdAt },
-// where parentId is null for top-level folders. Folders are shared by notes
-// and documents; both point to their folder with `folderId`.
+// Helpers for nested folders. A folder is { id, name, kind, parentId, createdAt },
+// where kind is "note" or "doc" (Notes and Documents have separate folders)
+// and parentId is null for top-level folders. Notes and documents point to
+// their folder with `folderId`.
+
+export const KINDS = ["note", "doc"];
 
 /** Folder and all of its sub-folders' ids (at any depth). */
 export function descendantIds(folders, folderId) {
@@ -49,18 +52,18 @@ export function folderTree(folders) {
 }
 
 /**
- * Notes and documents must live inside a folder. Items that are at the top
- * level or whose folder no longer exists are moved into a default folder,
- * which is created only when needed.
+ * Notes and documents must live inside a folder of their own kind. Items
+ * that are at the top level or whose folder is missing (or of the other
+ * kind) are moved into a default folder, which is created only when needed.
  */
-export function placeInFolders(items, folders, defaultName, createId) {
-  const known = new Set(folders.map((f) => f.id));
+export function placeInFolders(items, folders, kind, defaultName, createId) {
+  const known = new Set(folders.filter((f) => f.kind === kind).map((f) => f.id));
   if (items.every((i) => known.has(i.folderId))) return { items, folders };
 
-  let target = folders.find((f) => !f.parentId && !f.deletedAt && f.name === defaultName);
+  let target = folders.find((f) => f.kind === kind && !f.parentId && !f.deletedAt && f.name === defaultName);
   const nextFolders = target
     ? folders
-    : [...folders, (target = { id: createId(), name: defaultName, parentId: null, createdAt: Date.now() })];
+    : [...folders, (target = { id: createId(), name: defaultName, kind, parentId: null, createdAt: Date.now() })];
 
   return {
     items: items.map((i) => (known.has(i.folderId) ? i : { ...i, folderId: target.id })),
@@ -69,36 +72,60 @@ export function placeInFolders(items, folders, defaultName, createId) {
 }
 
 /**
- * Older versions kept separate folders for notes and documents. Now folders
- * are shared, so folders with the same name in the same place are merged
- * (e.g. "Work" for notes and "Work" for documents become one "Work").
+ * One version of the app had folders shared by notes and documents (no
+ * `kind`). This gives every such folder a kind again:
+ * - a folder whose contents (at any depth) are only notes becomes a Notes folder
+ * - only documents → a Documents folder
+ * - both → split into two copies, one for each tab, each with its own items
+ * - empty → same as its parent folder, or both tabs at the top level
+ * Folders that already have a kind are left unchanged.
  */
-export function mergeDuplicateFolders({ notes, docs, folders }) {
-  const keep = new Map(); // "parentId/name" -> kept folder id
-  const remap = new Map(); // removed folder id -> kept folder id
-  const result = [];
+export function splitFoldersByKind(data, createId) {
+  const { notes, docs, folders } = data;
+  if (folders.every((f) => KINDS.includes(f.kind))) return data;
 
-  // Handle parents before children so merged parents are already remapped.
+  const kindsOf = new Map(); // folder id -> Set of kinds it needs
+  const contentKinds = (id) => {
+    const ids = descendantIds(folders, id);
+    const kinds = new Set();
+    if (notes.some((n) => ids.has(n.folderId))) kinds.add("note");
+    if (docs.some((d) => ids.has(d.folderId))) kinds.add("doc");
+    return kinds;
+  };
+
+  // Parents first, so empty sub-folders can follow their parent.
   for (const { folder } of folderTree(folders)) {
-    const parentId = folder.parentId ? (remap.get(folder.parentId) ?? folder.parentId) : null;
-    const key = `${parentId}/${folder.name.trim().toLowerCase()}`;
-    const { kind: _kind, ...rest } = folder;
-    if (keep.has(key) && !folder.deletedAt) {
-      remap.set(folder.id, keep.get(key));
-    } else {
-      if (!folder.deletedAt) keep.set(key, folder.id);
-      result.push({ ...rest, parentId });
+    if (KINDS.includes(folder.kind)) {
+      kindsOf.set(folder.id, new Set([folder.kind]));
+      continue;
     }
+    const own = contentKinds(folder.id);
+    const parentKinds = folder.parentId ? kindsOf.get(folder.parentId) : null;
+    kindsOf.set(folder.id, own.size ? own : new Set(parentKinds ?? KINDS));
   }
-  // Keep folders the tree walk could not reach (broken parent links) at the top level.
-  const seen = new Set([...result.map((f) => f.id), ...remap.keys()]);
+  // Folders the tree walk could not reach (broken parent links) keep both kinds.
+  for (const f of folders) if (!kindsOf.has(f.id)) kindsOf.set(f.id, new Set(KINDS));
+
+  // The Notes copy keeps the original id; a Documents copy gets a new id.
+  const docCopyId = new Map();
   for (const f of folders) {
-    if (!seen.has(f.id)) {
-      const { kind: _kind, ...rest } = f;
-      result.push({ ...rest, parentId: null });
+    const kinds = kindsOf.get(f.id);
+    if (!KINDS.includes(f.kind) && kinds.has("doc") && kinds.has("note")) docCopyId.set(f.id, createId());
+  }
+  const idFor = (folderId, kind) => (kind === "doc" && docCopyId.has(folderId) ? docCopyId.get(folderId) : folderId);
+
+  const result = [];
+  for (const f of folders) {
+    if (KINDS.includes(f.kind)) {
+      result.push(f);
+      continue;
+    }
+    for (const kind of KINDS) {
+      if (!kindsOf.get(f.id).has(kind)) continue;
+      result.push({ ...f, id: idFor(f.id, kind), kind, parentId: f.parentId ? idFor(f.parentId, kind) : null });
     }
   }
 
-  const fix = (item) => (remap.has(item.folderId) ? { ...item, folderId: remap.get(item.folderId) } : item);
-  return { notes: notes.map(fix), docs: docs.map(fix), folders: result };
+  const fixDoc = (d) => (docCopyId.has(d.folderId) ? { ...d, folderId: docCopyId.get(d.folderId) } : d);
+  return { notes, docs: docs.map(fixDoc), folders: result };
 }
