@@ -15,7 +15,7 @@ export function NoteEditor({ id, note, gone, actions }) {
   if (gone) {
     return (
       <main className="flex min-h-dvh flex-col items-center justify-center px-6 text-center">
-        <Trash2 className="h-8 w-8 text-slate-400" />
+        <Trash2 className="h-8 w-8 text-slate-500 dark:text-slate-400" />
         <h1 className="mt-4 text-base font-semibold text-slate-900 dark:text-white">This note is in the Trash</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">You can restore it from Settings → Trash.</p>
         <button type="button" onClick={() => navigate("trash", { replace: true })} className="btn-secondary mt-5">
@@ -97,7 +97,7 @@ function Editor({ id, note, actions }) {
               <ArrowLeft className="h-5 w-5" />
             </button>
             <span
-              className="flex flex-1 items-center gap-1 text-xs font-medium text-slate-400 dark:text-slate-500"
+              className="flex flex-1 items-center gap-1 text-xs font-medium text-slate-500 dark:text-slate-400"
               aria-live="polite"
             >
               {status === "Saved" && <Check className="h-3.5 w-3.5" />}
@@ -107,7 +107,7 @@ function Editor({ id, note, actions }) {
               <button
                 type="button"
                 onClick={() => actions.togglePin("note", id)}
-                className={`icon-btn ${note.pinned ? "text-amber-500 dark:text-amber-400" : ""}`}
+                className={`icon-btn ${note.pinned ? "text-amber-600 dark:text-amber-400" : ""}`}
                 aria-label={note.pinned ? "Unpin note" : "Pin note"}
                 aria-pressed={note.pinned}
                 title={note.pinned ? "Unpin" : "Pin"}
@@ -138,10 +138,10 @@ function Editor({ id, note, actions }) {
             aria-label="Note title"
             maxLength={150}
             autoFocus={isNew}
-            className="w-full bg-transparent text-2xl font-bold tracking-tight text-slate-900 outline-none placeholder:text-slate-300 focus-visible:outline-none dark:text-white dark:placeholder:text-slate-600"
+            className="w-full bg-transparent text-2xl font-bold tracking-tight text-slate-900 outline-none placeholder:text-slate-500 focus-visible:outline-none dark:text-white dark:placeholder:text-slate-500 dark:text-slate-400"
           />
           {note && (
-            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Edited {formatDate(note.updatedAt)}</p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Edited {formatDate(note.updatedAt)}</p>
           )}
           <textarea
             ref={bodyRef}
@@ -149,7 +149,7 @@ function Editor({ id, note, actions }) {
             onChange={(e) => setBody(e.target.value)}
             placeholder="Start writing…"
             aria-label="Note text"
-            className="mt-4 min-h-[60dvh] w-full flex-1 resize-none bg-transparent text-base leading-relaxed text-slate-700 outline-none [field-sizing:content] placeholder:text-slate-300 focus-visible:outline-none dark:text-slate-200 dark:placeholder:text-slate-600"
+            className="mt-4 min-h-[60dvh] w-full flex-1 resize-none bg-transparent text-base leading-relaxed text-slate-700 outline-none [field-sizing:content] placeholder:text-slate-500 focus-visible:outline-none dark:text-slate-200 dark:placeholder:text-slate-500 dark:text-slate-400"
           />
         </main>
       </div>

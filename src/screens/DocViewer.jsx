@@ -94,7 +94,7 @@ export function DocViewer({ doc, actions }) {
           <button
             type="button"
             onClick={() => actions.togglePin("doc", doc.id)}
-            className={`icon-btn ${doc.pinned ? "text-amber-500 dark:text-amber-400" : ""}`}
+            className={`icon-btn ${doc.pinned ? "text-amber-600 dark:text-amber-400" : ""}`}
             aria-label={doc.pinned ? "Unpin document" : "Pin document"}
             aria-pressed={doc.pinned}
           >
@@ -108,7 +108,7 @@ export function DocViewer({ doc, actions }) {
     >
       {file.status === "loading" && (
         <div className="flex flex-1 items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-slate-400" aria-label="Loading" />
+          <Loader2 className="h-6 w-6 animate-spin text-slate-500 dark:text-slate-400" aria-label="Loading" />
         </div>
       )}
 

@@ -77,7 +77,7 @@ export function PdfPreview({ blob, onError }) {
     <div className="mx-auto w-full max-w-3xl px-3 py-4 sm:px-6">
       {status === "loading" && (
         <div className="flex justify-center py-16">
-          <Loader2 className="h-6 w-6 animate-spin text-slate-400" aria-label="Loading PDF" />
+          <Loader2 className="h-6 w-6 animate-spin text-slate-500 dark:text-slate-400" aria-label="Loading PDF" />
         </div>
       )}
       <div ref={container} className="flex flex-col gap-3" />
