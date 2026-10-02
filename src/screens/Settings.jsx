@@ -94,7 +94,7 @@ export function Settings({ data, trashCount, theme, lastBackup, actions }) {
           <div className={card}>
             <label className={`${row} cursor-pointer justify-between`}>
               <span className="flex items-center gap-3 font-medium text-slate-700 dark:text-slate-200">
-                <Moon className="h-5 w-5 text-slate-400" />
+                <Moon className="h-5 w-5 text-slate-500 dark:text-slate-400" />
                 Dark mode
               </span>
               <input
@@ -126,7 +126,7 @@ export function Settings({ data, trashCount, theme, lastBackup, actions }) {
               </span>
             </button>
             <button type="button" onClick={() => restoreInput.current?.click()} className={rowButton}>
-              <Upload className="h-5 w-5 text-slate-400" />
+              <Upload className="h-5 w-5 text-slate-500 dark:text-slate-400" />
               <span className="flex-1">Restore from backup</span>
             </button>
           </div>
@@ -138,14 +138,14 @@ export function Settings({ data, trashCount, theme, lastBackup, actions }) {
           <h2 className={heading}>Trash</h2>
           <div className={card}>
             <button type="button" onClick={() => navigate("trash")} className={rowButton}>
-              <Trash2 className="h-5 w-5 text-slate-400" />
+              <Trash2 className="h-5 w-5 text-slate-500 dark:text-slate-400" />
               <span className="flex-1">
                 Trash
                 <span className="block text-xs font-normal text-slate-500 dark:text-slate-400">
                   {trashCount === 0 ? "Empty" : `${trashCount} ${trashCount === 1 ? "item" : "items"} · deleted after 30 days`}
                 </span>
               </span>
-              <ChevronRight className="h-4 w-4 text-slate-300 dark:text-slate-600" />
+              <ChevronRight className="h-4 w-4 text-slate-400 dark:text-slate-500" />
             </button>
           </div>
         </section>
@@ -155,7 +155,7 @@ export function Settings({ data, trashCount, theme, lastBackup, actions }) {
           <h2 className={heading}>Storage & app</h2>
           <div className={card}>
             <div className={`${row} text-slate-700 dark:text-slate-200`}>
-              <HardDrive className="h-5 w-5 text-slate-400" />
+              <HardDrive className="h-5 w-5 text-slate-500 dark:text-slate-400" />
               <span className="flex-1 font-medium">
                 Space used
                 <span className="block text-xs font-normal text-slate-500 dark:text-slate-400">
@@ -170,7 +170,7 @@ export function Settings({ data, trashCount, theme, lastBackup, actions }) {
               </div>
             ) : (
               <button type="button" onClick={protect} className={rowButton}>
-                <ShieldCheck className="h-5 w-5 text-slate-400" />
+                <ShieldCheck className="h-5 w-5 text-slate-500 dark:text-slate-400" />
                 <span className="flex-1">
                   Protect my data
                   <span className="block text-xs font-normal text-slate-500 dark:text-slate-400">
@@ -196,7 +196,7 @@ export function Settings({ data, trashCount, theme, lastBackup, actions }) {
             )}
             {!isStandalone() && !installable && isIos() && (
               <div className={`${row} text-slate-700 dark:text-slate-200`}>
-                <Share className="h-5 w-5 shrink-0 text-slate-400" />
+                <Share className="h-5 w-5 shrink-0 text-slate-500 dark:text-slate-400" />
                 <span className="flex-1">
                   <span className="font-medium">Install on iPhone / iPad</span>
                   <span className="block text-xs text-slate-500 dark:text-slate-400">

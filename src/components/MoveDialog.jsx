@@ -29,7 +29,7 @@ export function MoveDialog({ target, folders, onClose, onMove }) {
         {/* Only folders can sit at the top level; notes and documents always live in a folder. */}
         {kind === "folder" && (
           <button type="button" onClick={() => choose(null)} className={rowClass}>
-            <HomeIcon className="h-5 w-5 shrink-0 text-slate-400" />
+            <HomeIcon className="h-5 w-5 shrink-0 text-slate-500 dark:text-slate-400" />
             <span className="flex-1">Top level</span>
             {current === null && <Check className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />}
           </button>
@@ -42,7 +42,7 @@ export function MoveDialog({ target, folders, onClose, onMove }) {
             className={rowClass}
             style={{ paddingLeft: `${0.75 + depth * 1.25}rem` }}
           >
-            <Folder className="h-5 w-5 shrink-0 fill-amber-200 text-amber-500 dark:fill-amber-500/30" />
+            <Folder className="h-5 w-5 shrink-0 fill-amber-200 text-amber-600 dark:fill-amber-500/30" />
             <span className="min-w-0 flex-1 truncate">{folder.name}</span>
             {current === folder.id && <Check className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />}
           </button>

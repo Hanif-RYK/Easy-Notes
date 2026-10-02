@@ -129,7 +129,7 @@ export function Home({ tab, folder, notes, docs, folders, lastBackup, actions })
           onClick={() => openFolder(f.id)}
           className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl p-3.5 text-left"
         >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-500 dark:bg-amber-500/15 dark:text-amber-300">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300">
             <Folder className="h-5 w-5 fill-current/25" />
           </span>
           <span className="min-w-0 flex-1">
@@ -139,12 +139,12 @@ export function Home({ tab, folder, notes, docs, folders, lastBackup, actions })
               {count === 0 ? "Empty" : `${count} ${count === 1 ? "item" : "items"}`}
             </span>
           </span>
-          <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 dark:text-slate-600" />
+          <ChevronRight className="h-4 w-4 shrink-0 text-slate-400 dark:text-slate-500" />
         </button>
         <button
           type="button"
           onClick={() => setMenu({ kind: "folder", item: f })}
-          className="icon-btn mr-2 text-slate-400"
+          className="icon-btn mr-2 text-slate-500 dark:text-slate-400"
           aria-label={`Options for folder ${f.name}`}
         >
           <MoreHorizontal className="h-5 w-5" />
@@ -176,7 +176,7 @@ export function Home({ tab, folder, notes, docs, folders, lastBackup, actions })
           <span className="min-w-0 flex-1">
             <span className="flex items-center gap-1.5">
               <span className="truncate text-sm font-semibold text-slate-900 dark:text-white">{title}</span>
-              {item.pinned && <Pin className="h-3.5 w-3.5 shrink-0 fill-current text-amber-500" aria-label="Pinned" />}
+              {item.pinned && <Pin className="h-3.5 w-3.5 shrink-0 fill-current text-amber-600 dark:text-amber-400" aria-label="Pinned" />}
             </span>
             <span className="mt-0.5 block truncate text-xs text-slate-500 dark:text-slate-400">
               {location}
@@ -189,7 +189,7 @@ export function Home({ tab, folder, notes, docs, folders, lastBackup, actions })
         <button
           type="button"
           onClick={() => setMenu({ kind, item })}
-          className="icon-btn mr-2 text-slate-400"
+          className="icon-btn mr-2 text-slate-500 dark:text-slate-400"
           aria-label={`Options for ${title}`}
         >
           <MoreHorizontal className="h-5 w-5" />
@@ -281,7 +281,7 @@ export function Home({ tab, folder, notes, docs, folders, lastBackup, actions })
               >
                 <SettingsIcon className="h-5 w-5" />
                 {backupDue && (
-                  <span className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-slate-50 dark:ring-slate-950" />
+                  <span className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-amber-600 ring-2 ring-slate-50 dark:ring-slate-950" />
                 )}
               </button>
             </div>
@@ -290,7 +290,7 @@ export function Home({ tab, folder, notes, docs, folders, lastBackup, actions })
           {/* Search + filter */}
           <div className="mt-4 flex items-center gap-2">
             <div className="relative flex-1">
-              <Search className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Search className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-slate-500 dark:text-slate-400" />
               <input
                 type="search"
                 value={query}
@@ -303,7 +303,7 @@ export function Home({ tab, folder, notes, docs, folders, lastBackup, actions })
                 <button
                   type="button"
                   onClick={() => setQuery("")}
-                  className="absolute top-1/2 right-2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700"
+                  className="absolute top-1/2 right-2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
                   aria-label="Clear search"
                 >
                   <X className="h-4 w-4" />

@@ -14,7 +14,7 @@ export function Trash({ data, actions }) {
   const entries = trashEntries(data);
 
   const iconFor = ({ kind, item }) => {
-    if (kind === "folder") return { Icon: Folder, color: "bg-amber-50 text-amber-500 dark:bg-amber-500/15 dark:text-amber-300" };
+    if (kind === "folder") return { Icon: Folder, color: "bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300" };
     if (kind === "note") return { Icon: StickyNote, color: "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300" };
     return isImage(item.type)
       ? { Icon: ImageIcon, color: "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300" }
@@ -93,7 +93,7 @@ export function Trash({ data, actions }) {
                     <button
                       type="button"
                       onClick={() => setConfirm(entry)}
-                      className="icon-btn text-slate-400 hover:text-rose-600"
+                      className="icon-btn text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400"
                       aria-label={`Delete ${title(kind, item)} forever`}
                       title="Delete forever"
                     >
