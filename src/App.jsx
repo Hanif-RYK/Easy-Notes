@@ -4,6 +4,7 @@ import { useToast } from "./components/Toast.jsx";
 import { backupFileName, createBackup, dataUrlToBlob, mergeBackup, parseBackup } from "./lib/backup.js";
 import { deleteFile, getFile, putFile, setBlockedHandler } from "./lib/db.js";
 import { descendantIds, placeInFolders } from "./lib/folders.js";
+import { addRecords, buildSampleData, deleteAllData } from "./lib/sampleData.js";
 import { createSaver } from "./lib/persistence.js";
 import {
   createId,
@@ -295,13 +296,43 @@ export default function App() {
     setData((prev) => ({ ...prev, [key]: prev[key].map((i) => (i.id === id ? { ...i, pinned: !i.pinned } : i)) }));
   }, []);
 
-  const startApp = useCallback(() => {
-    const next = { startedAt: Date.now() };
-    saveProfile(next);
-    setProfile(next);
-    requestPersistentStorage();
-    navigate("notes", { replace: true });
-  }, []);
+  /** Adds the sample folders, notes and documents (files are stored like uploads). */
+  const loadSampleData = useCallback(async () => {
+    const sample = buildSampleData({ createId });
+    const storedIds = new Set();
+    for (const { id, blob } of sample.files) {
+      try {
+        await putFile(id, blob);
+        storedIds.add(id);
+      } catch {
+        // A document whose file couldn't be stored is left out below.
+      }
+    }
+    const allSaved = storedIds.size === sample.files.length;
+    const records = allSaved ? sample : { ...sample, docs: sample.docs.filter((d) => storedIds.has(d.id)) };
+    setData((prev) => addRecords(prev, records));
+    toast(allSaved ? "Sample data added" : "Sample notes added (some sample files couldn't be saved)");
+  }, [toast]);
+
+  /** Permanently removes every folder, note and document, including the Trash. */
+  const deleteAll = useCallback(() => {
+    const { data: next, fileIds } = deleteAllData(dataRef.current);
+    setData(next);
+    for (const fileId of fileIds) deleteFile(fileId).catch(() => {});
+    toast("All data deleted");
+  }, [toast]);
+
+  const startApp = useCallback(
+    async ({ withSample = false } = {}) => {
+      const next = { startedAt: Date.now() };
+      saveProfile(next);
+      setProfile(next);
+      requestPersistentStorage();
+      navigate("notes", { replace: true });
+      if (withSample) await loadSampleData();
+    },
+    [loadSampleData],
+  );
 
   const exportBackup = useCallback(async () => {
     try {
@@ -362,6 +393,8 @@ export default function App() {
       togglePin,
       exportBackup,
       readBackup,
+      loadSampleData,
+      deleteAll,
       toggleTheme: () => setTheme((t) => (t === "dark" ? "light" : "dark")),
     }),
     [
@@ -381,6 +414,8 @@ export default function App() {
       togglePin,
       exportBackup,
       readBackup,
+      loadSampleData,
+      deleteAll,
     ],
   );
 

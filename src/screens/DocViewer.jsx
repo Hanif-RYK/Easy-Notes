@@ -200,7 +200,10 @@ function Shell({ title, subtitle, onBack, actions, children }) {
           {actions}
         </div>
       </header>
-      <main className="flex min-h-0 flex-1 flex-col overflow-auto">{children}</main>
+      {/* Focusable so keyboard users can scroll a long preview. */}
+      <main tabIndex={0} aria-label="Document preview" className="flex min-h-0 flex-1 flex-col overflow-auto">
+        {children}
+      </main>
     </div>
   );
 }

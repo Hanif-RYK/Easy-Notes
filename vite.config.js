@@ -43,5 +43,6 @@ export default defineConfig({
   ],
   test: {
     environment: "node",
+    include: ["src/**/*.test.js"], // e2e/ holds the Playwright tests (npm run test:e2e)
   },
 });

@@ -1,0 +1,86 @@
+EASY NOTES — LICENCE AGREEMENT
+Version 1.0.0
+Copyright (c) 2026 Muhammad Hanif. All rights reserved.
+
+This licence applies to the Easy Notes source code, design and documentation
+(the "Item") bought from a marketplace. By downloading or using the Item you
+agree to these terms. The licence type you bought (Regular or Extended) is
+shown on your purchase receipt.
+
+1. DEFINITIONS
+   "End Product"  — a single app, website or project that you (or your client)
+                    build with the Item, in which the Item is customised and is
+                    one part of the whole.
+   "End User"     — a person who uses or views the End Product.
+   "Sale"         — charging End Users money to access, download or use the
+                    End Product (including subscriptions and in-app payments).
+
+2. REGULAR LICENCE
+   You may:
+   a) Use the Item to create ONE End Product for yourself or for ONE client.
+   b) Modify, translate and re-brand the Item as much as you like.
+   c) Host and publish the End Product, free of charge to End Users
+      (showing advertising is allowed).
+   You may not:
+   d) Sell the End Product or charge End Users for access to it
+      (an Extended Licence is required for that).
+   e) Use the Item in more than one End Product (buy one licence per product).
+
+3. EXTENDED LICENCE
+   Everything in the Regular Licence, and you may also:
+   a) Sell the End Product or charge End Users for it (for example as a paid
+      app, a subscription service or a SaaS product).
+   Still ONE End Product per Extended Licence.
+
+4. RESTRICTIONS (BOTH LICENCES)
+   You may NOT:
+   a) Resell, redistribute, sublicense, share or give away the Item or its
+      source code on its own or as a template, starter kit, theme, UI kit or
+      code library, even if modified — whether free or paid.
+   b) Include the Item in a product that lets End Users build their own apps
+      or templates from it (for example a website or app builder).
+   c) Publish the source code in a public repository. Private repositories
+      for your own work are fine.
+   d) Claim the original Item as your own work, or remove the copyright
+      and licence notices that came with it.
+   e) Use the Item, or the End Product, for anything illegal.
+
+5. CLIENT WORK
+   If you build the End Product for a client, you may transfer the End
+   Product (with the Item inside it) to that client; the licence then moves
+   to the client. You may not keep using the same licence for other work.
+
+6. THIRD-PARTY COMPONENTS
+   The Item uses open-source packages (React — MIT, pdf.js — Apache-2.0,
+   Lucide — ISC, Inter font — SIL OFL 1.1, Workbox — MIT and build tools under
+   MIT). They are NOT covered by this licence; each stays under its own
+   licence, which you must follow. See documentation.html → "Credits &
+   licences" and each package's LICENSE file in node_modules/.
+
+7. SAMPLE CONTENT
+   The sample notes, names, companies and documents are fictional and are
+   included for demonstration only.
+
+8. NO WARRANTY
+   THE ITEM IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO MERCHANTABILITY, FITNESS FOR A
+   PARTICULAR PURPOSE AND NON-INFRINGEMENT. YOU ARE RESPONSIBLE FOR TESTING
+   THE END PRODUCT, FOR BACKING UP DATA AND FOR COMPLYING WITH LAWS THAT
+   APPLY TO YOUR END PRODUCT (FOR EXAMPLE PRIVACY LAWS).
+
+9. LIMITATION OF LIABILITY
+   IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES, LOSS OF
+   DATA OR OTHER LIABILITY ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+   ITEM OR ITS USE. THE AUTHOR'S TOTAL LIABILITY IS LIMITED TO THE PRICE YOU
+   PAID FOR THE LICENCE.
+
+10. TERMINATION
+   This licence ends automatically if you break any of its terms. You must
+   then stop using the Item and delete all copies.
+
+If the marketplace where you bought the Item has its own licence terms, those
+terms apply together with this agreement; where they conflict, the
+marketplace's terms apply.
+
+Questions about licensing: contact Muhammad Hanif through the marketplace
+item page.

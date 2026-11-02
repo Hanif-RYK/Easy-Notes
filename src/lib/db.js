@@ -99,10 +99,26 @@ export function writeChanges(changes) {
 
 // ---- Files -----------------------------------------------------------------
 
-export const putFile = (id, blob) => transaction("files", "readwrite", (tx) => tx.objectStore("files").put(blob, id));
+const storeFile = (id, value) => transaction("files", "readwrite", (tx) => tx.objectStore("files").put(value, id));
+
+/**
+ * Stores a document's file. Some browsers (e.g. Safari in a private window)
+ * refuse to put Blobs in IndexedDB, so the bytes are stored as an
+ * ArrayBuffer instead; getFile() turns them back into a Blob.
+ */
+export async function putFile(id, blob) {
+  try {
+    await storeFile(id, blob);
+  } catch (error) {
+    if (error?.name === "QuotaExceededError") throw error;
+    await storeFile(id, { type: blob.type, bytes: await blob.arrayBuffer() });
+  }
+}
+
 export const deleteFile = (id) => transaction("files", "readwrite", (tx) => tx.objectStore("files").delete(id));
 
 export async function getFile(id) {
   const db = await openDb();
-  return request(db.transaction("files", "readonly").objectStore("files").get(id));
+  const value = await request(db.transaction("files", "readonly").objectStore("files").get(id));
+  return value?.bytes instanceof ArrayBuffer ? new Blob([value.bytes], { type: value.type }) : value;
 }

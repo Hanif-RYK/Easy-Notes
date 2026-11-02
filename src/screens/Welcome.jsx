@@ -34,9 +34,15 @@ export function Welcome({ onStart }) {
           ))}
         </ol>
 
-        <button type="button" onClick={onStart} className="btn-primary mt-8 h-12 w-full">
+        <button type="button" onClick={() => onStart()} className="btn-primary mt-8 h-12 w-full">
           Get started
         </button>
+        <button type="button" onClick={() => onStart({ withSample: true })} className="btn-secondary mt-3 h-12 w-full">
+          Try with sample data
+        </button>
+        <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+          Sample folders, notes and documents are made up. You can delete them any time in Settings.
+        </p>
       </div>
     </main>
   );
