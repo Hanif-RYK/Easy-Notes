@@ -296,8 +296,11 @@ export default function App() {
     setData((prev) => ({ ...prev, [key]: prev[key].map((i) => (i.id === id ? { ...i, pinned: !i.pinned } : i)) }));
   }, []);
 
-  /** Adds the sample folders, notes and documents (files are stored like uploads). */
-  const loadSampleData = useCallback(async () => {
+  /**
+   * Adds the sample folders, notes and documents (files are stored like
+   * uploads) and returns how many of each were added.
+   */
+  const loadSampleData = useCallback(async ({ offerView = false } = {}) => {
     const sample = buildSampleData({ createId });
     const storedIds = new Set();
     for (const { id, blob } of sample.files) {
@@ -311,7 +314,12 @@ export default function App() {
     const allSaved = storedIds.size === sample.files.length;
     const records = allSaved ? sample : { ...sample, docs: sample.docs.filter((d) => storedIds.has(d.id)) };
     setData((prev) => addRecords(prev, records));
-    toast(allSaved ? "Sample data added" : "Sample notes added (some sample files couldn't be saved)");
+    const added = { folders: records.folders.length, notes: records.notes.length, docs: records.docs.length };
+    const message = allSaved
+      ? `Sample data added: ${added.notes} notes, ${added.docs} documents`
+      : `Sample notes added (${sample.docs.length - added.docs} sample files couldn't be saved)`;
+    toast(message, offerView ? { label: "View", onClick: () => navigate("notes") } : undefined);
+    return added;
   }, [toast]);
 
   /** Permanently removes every folder, note and document, including the Trash. */

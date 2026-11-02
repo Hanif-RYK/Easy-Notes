@@ -87,6 +87,12 @@ test("sample data → notes → documents → trash → backup → restore → d
   expect(backup.notes).toHaveLength(9);
   expect(backup.docs).toHaveLength(7);
 
+  // "Load sample data" in Settings shows clear feedback, then delete everything
+  await page.getByRole("button", { name: /^Load sample data/ }).click();
+  await expect(toast).toContainText("Sample data added: 9 notes, 6 documents");
+  await expect(page.getByRole("button", { name: /^Load sample data/ })).toContainText("Added 10 folders, 9 notes and 6 documents");
+  await expect(summary("Notes")).toHaveText("18");
+
   // Delete all data, then restore the backup
   await page.getByRole("button", { name: /^Delete all data/ }).click();
   await page.getByRole("button", { name: "Delete everything" }).click();

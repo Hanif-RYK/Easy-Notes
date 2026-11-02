@@ -20,6 +20,8 @@ First public release.
 - Offline support and installable PWA; light and dark mode.
 
 ### Fixed
+- “Load sample data” in Settings shows a spinner, then a clear “Added …” message and a toast with
+  a “View” button; the row no longer jumps while loading.
 - The “Create new” sheet now always closes after uploading files or taking a photo.
 - Messages (toasts) move to the top of the screen while a sheet or dialog is open, so they never cover it.
 - Uploading files failed in Safari / WebKit private windows (IndexedDB refuses Blobs there);

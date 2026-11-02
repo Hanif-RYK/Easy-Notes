@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   ChevronRight,
+  Check,
   Download,
   Eraser,
   HardDrive,
+  Loader2,
   Moon,
   Share,
   ShieldCheck,
@@ -32,7 +34,7 @@ export function Settings({ data, trashCount, theme, lastBackup, actions }) {
   const [busy, setBusy] = useState(false);
   const [restoring, setRestoring] = useState(null); // { summary, apply }
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
-  const [loadingSample, setLoadingSample] = useState(false);
+  const [sampleState, setSampleState] = useState(null); // null | "loading" | { notes, docs, folders }
   const [storage, setStorage] = useState({ usage: null, persisted: false });
   const [installable, setInstallable] = useState(canInstall);
 
@@ -65,10 +67,15 @@ export function Settings({ data, trashCount, theme, lastBackup, actions }) {
   };
 
   const loadSample = async () => {
-    setLoadingSample(true);
-    await actions.loadSampleData();
-    setLoadingSample(false);
+    setSampleState("loading");
+    try {
+      setSampleState(await actions.loadSampleData({ offerView: true }));
+    } catch {
+      setSampleState(null);
+      toast("Couldn't add the sample data");
+    }
   };
+  const sampleAdded = sampleState && sampleState !== "loading";
 
   const summary = restoring?.summary;
 
@@ -222,12 +229,33 @@ export function Settings({ data, trashCount, theme, lastBackup, actions }) {
         <section>
           <h2 className={heading}>Data</h2>
           <div className={card}>
-            <button type="button" onClick={loadSample} disabled={loadingSample} className={rowButton}>
-              <Sparkles className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+            <button
+              type="button"
+              onClick={loadSample}
+              disabled={sampleState === "loading"}
+              aria-busy={sampleState === "loading"}
+              className={rowButton}
+            >
+              {sampleState === "loading" ? (
+                <Loader2 className="h-5 w-5 animate-spin text-indigo-600 dark:text-indigo-400" aria-hidden="true" />
+              ) : sampleAdded ? (
+                <Check className="h-5 w-5 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+              ) : (
+                <Sparkles className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+              )}
               <span className="flex-1">
-                {loadingSample ? "Adding sample data…" : "Load sample data"}
-                <span className="block text-xs font-normal text-slate-500 dark:text-slate-400">
-                  Adds example folders, notes and documents. Your own data is kept.
+                Load sample data
+                {/* Fixed text size and line count, so the row doesn't jump while loading. */}
+                <span
+                  className={`block text-xs font-normal ${
+                    sampleAdded ? "text-emerald-700 dark:text-emerald-400" : "text-slate-500 dark:text-slate-400"
+                  }`}
+                >
+                  {sampleState === "loading"
+                    ? "Adding example folders, notes and documents…"
+                    : sampleAdded
+                      ? `Added ${sampleState.folders} folders, ${sampleState.notes} notes and ${sampleState.docs} documents. Tap again to add another set.`
+                      : "Adds example folders, notes and documents. Your own data is kept."}
                 </span>
               </span>
             </button>
@@ -254,7 +282,10 @@ export function Settings({ data, trashCount, theme, lastBackup, actions }) {
         title="Delete all data?"
         message={`This permanently removes ${data.folders.length} folders, ${data.notes.length} notes, ${data.docs.length} documents and everything in the Trash from this device. It can't be undone — download a backup first if you might need them.`}
         confirmLabel="Delete everything"
-        onConfirm={actions.deleteAll}
+        onConfirm={() => {
+          actions.deleteAll();
+          setSampleState(null);
+        }}
       />
 
       <ConfirmDialog
