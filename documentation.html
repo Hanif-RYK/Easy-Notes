@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Easy Notes — Documentation</title>
+<meta name="description" content="How to install, customise and deploy the Easy Notes source code." />
+<style>
+  /* Standalone page: no external fonts, scripts or images, so it opens offline. */
+  :root {
+    --bg: #f8fafc; --card: #ffffff; --border: #e2e8f0; --text: #1e293b; --heading: #0f172a;
+    --muted: #475569; --accent: #4f46e5; --accent-soft: #eef2ff; --code-bg: #f1f5f9; --code-text: #0f172a;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #020617; --card: #0f172a; --border: #1e293b; --text: #e2e8f0; --heading: #ffffff;
+      --muted: #94a3b8; --accent: #a5b4fc; --accent-soft: #1e1b4b; --code-bg: #1e293b; --code-text: #e2e8f0;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #020617; --card: #0f172a; --border: #1e293b; --text: #e2e8f0; --heading: #ffffff;
+    --muted: #94a3b8; --accent: #a5b4fc; --accent-soft: #1e1b4b; --code-bg: #1e293b; --code-text: #e2e8f0;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 1rem; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.65 "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-underline-offset: 2px; }
+  :focus-visible { outline: 2px solid #6366f1; outline-offset: 2px; border-radius: 4px; }
+  .wrap { max-width: 64rem; margin: 0 auto; padding: 0 16px; display: grid; gap: 2rem; }
+  @media (min-width: 900px) { .wrap { grid-template-columns: 14rem minmax(0, 1fr); padding: 0 24px; } }
+  header.top { max-width: 64rem; margin: 0 auto; padding: 2rem 16px 1.5rem; display: flex; align-items: center; gap: 1rem; }
+  .logo { width: 48px; height: 48px; border-radius: 14px; background: #4f46e5; display: grid; place-items: center; flex: none; box-shadow: 0 8px 20px -8px #4f46e5; }
+  header.top h1 { margin: 0; font-size: 1.75rem; line-height: 1.2; color: var(--heading); letter-spacing: -0.02em; }
+  header.top p { margin: 0.15rem 0 0; color: var(--muted); font-size: 0.95rem; }
+  .theme { margin-left: auto; border: 1px solid var(--border); background: var(--card); color: var(--text); border-radius: 999px; padding: 0.45rem 0.9rem; white-space: nowrap; font: inherit; font-size: 0.85rem; cursor: pointer; }
+  nav.toc { font-size: 0.9rem; }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; }
+  @media (min-width: 900px) { nav.toc ol { display: block; position: sticky; top: 1rem; } nav.toc li { margin: 0.2rem 0; } }
+  nav.toc a { color: var(--muted); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  main { min-width: 0; padding-bottom: 4rem; }
+  section { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 1.25rem 1.25rem 0.5rem; margin-bottom: 1.25rem; }
+  @media (min-width: 640px) { section { padding: 1.5rem 1.75rem 0.75rem; } }
+  h2 { margin: 0 0 0.75rem; font-size: 1.25rem; color: var(--heading); letter-spacing: -0.01em; }
+  h3 { margin: 1.25rem 0 0.4rem; font-size: 1rem; color: var(--heading); }
+  p, ul, ol { margin: 0 0 1rem; }
+  li { margin: 0.2rem 0; }
+  code { font: 0.875em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--code-bg); color: var(--code-text); padding: 0.1em 0.35em; border-radius: 6px; overflow-wrap: anywhere; }
+  pre { background: var(--code-bg); color: var(--code-text); padding: 0.9rem 1rem; border-radius: 12px; overflow-x: auto; margin: 0 0 1rem; font-size: 0.85rem; line-height: 1.55; }
+  pre code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; }
+  .note { background: var(--accent-soft); border-radius: 12px; padding: 0.75rem 1rem; margin: 0 0 1rem; font-size: 0.95rem; }
+  .table { overflow-x: auto; margin: 0 0 1rem; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--heading); font-weight: 600; }
+  .muted { color: var(--muted); }
+  .features { display: grid; gap: 0.6rem; padding: 0; list-style: none; }
+  @media (min-width: 640px) { .features { grid-template-columns: 1fr 1fr; } }
+  .features li { border: 1px solid var(--border); border-radius: 14px; padding: 0.7rem 0.9rem; margin: 0; }
+  .features strong { color: var(--heading); display: block; }
+  footer { text-align: center; color: var(--muted); font-size: 0.85rem; padding: 0 16px 3rem; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="logo" aria-hidden="true">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+  </div>
+  <div>
+    <h1>Easy Notes</h1>
+    <p>Documentation · version 1.0.0 · by Muhammad Hanif</p>
+  </div>
+  <button type="button" class="theme" id="theme">Dark mode</button>
+</header>
+
+<div class="wrap">
+  <nav class="toc" aria-label="Contents">
+    <ol>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#requirements">Requirements</a></li>
+      <li><a href="#install">Install &amp; run</a></li>
+      <li><a href="#structure">Project structure</a></li>
+      <li><a href="#data">How data is stored</a></li>
+      <li><a href="#name">Change the app name</a></li>
+      <li><a href="#colours">Colours &amp; fonts</a></li>
+      <li><a href="#icons">Icons &amp; PWA manifest</a></li>
+      <li><a href="#sample">Sample data</a></li>
+      <li><a href="#deploy">Deploy</a></li>
+      <li><a href="#backend">Connect a backend</a></li>
+      <li><a href="#browsers">Browser support</a></li>
+      <li><a href="#tests">Tests</a></li>
+      <li><a href="#credits">Credits &amp; licences</a></li>
+      <li><a href="#changelog">Changelog</a></li>
+      <li><a href="#support">Support</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <section id="overview">
+      <h2>Overview</h2>
+      <p>Easy Notes is a mobile-first app to keep notes and documents (PDFs and photos) organised in folders.
+        It is a <strong>Progressive Web App</strong> built with <strong>React 19</strong>, <strong>Vite</strong> and
+        <strong>Tailwind CSS 4</strong>. All data stays in the browser (IndexedDB) on the user's device:
+        there is no server, no account, no tracking and no external requests.</p>
+      <p>Because it is a set of static files, you can host it for free on any static host and it keeps working offline.</p>
+    </section>
+
+    <section id="features">
+      <h2>Features</h2>
+      <ul class="features">
+        <li><strong>Folders &amp; sub-folders</strong>Any depth; Notes and Documents each have their own folders.</li>
+        <li><strong>Notes</strong>Autosave, search, sort, pin to top, share, print / save as PDF.</li>
+        <li><strong>Documents</strong>Upload PDFs and images or take a photo; PDFs preview inside the app on every device.</li>
+        <li><strong>Move &amp; organise</strong>Move notes, documents and folders between folders.</li>
+        <li><strong>Trash with Undo</strong>Deleted items can be restored for 30 days.</li>
+        <li><strong>Backup &amp; restore</strong>One JSON file with everything, including the documents.</li>
+        <li><strong>Sample data</strong>“Try with sample data” on the Welcome screen, plus “Load sample data” and “Delete all data” in Settings.</li>
+        <li><strong>Offline &amp; installable</strong>Service worker and web manifest; install on phone or desktop.</li>
+        <li><strong>Light &amp; dark mode</strong>Follows the system, with a switch in Settings.</li>
+        <li><strong>Accessible</strong>Keyboard friendly, visible focus, labelled buttons; checked with axe-core in light and dark mode.</li>
+      </ul>
+    </section>
+
+    <section id="requirements">
+      <h2>Requirements</h2>
+      <ul>
+        <li><a href="https://nodejs.org/">Node.js</a> <strong>20 or newer</strong> (includes npm).</li>
+        <li>Any code editor (for example VS Code).</li>
+        <li>No database, server or API keys are needed.</li>
+      </ul>
+    </section>
+
+    <section id="install">
+      <h2>Install &amp; run</h2>
+      <p>Open a terminal in the project folder and run:</p>
+<pre tabindex="0"><code>npm install       # install dependencies (first time only)
+npm run dev       # start the dev server at http://localhost:5173
+npm run build     # production build into the dist/ folder
+npm run preview   # serve the production build at http://localhost:4173</code></pre>
+      <h3>Quality checks</h3>
+<pre tabindex="0"><code>npm run lint      # ESLint
+npm test          # unit tests (Vitest)
+npm run check     # lint + unit tests + build (the same as CI)
+npm run test:e2e  # browser tests in Chromium, Firefox and WebKit (Playwright)</code></pre>
+      <p class="note">Before the first <code>npm run test:e2e</code>, install the test browsers once with
+        <code>npx playwright install</code>.</p>
+    </section>
+
+    <section id="structure">
+      <h2>Project structure</h2>
+<pre tabindex="0"><code>index.html                app shell (title, theme script, start-up fallback)
+vite.config.js            Vite, Tailwind and PWA (manifest, service worker) settings
+public/                   app icons
+src/
+  main.jsx                app bootstrap
+  App.jsx                 app state, data actions and routing
+  index.css               Tailwind setup and shared styles (buttons, inputs)
+  screens/                Welcome, Home, NoteEditor, DocViewer, Settings, Trash, LoadingScreen
+  components/             Modal &amp; dialogs, MoveDialog, PdfPreview, Toast, UpdateNotifier, ErrorBoundary, Logo
+  hooks/useHashRoute.js   tiny hash-based router (works on any static host)
+  lib/
+    db.js                 IndexedDB access (records and files)
+    persistence.js        saves only changed records, with a crash-safe journal
+    storage.js            loading, migrating older data, small settings
+    folders.js            folder tree helpers
+    trash.js              Trash rules (30 days)
+    backup.js             backup file format, validation and restore
+    sampleData.js         the fictional sample folders, notes and documents
+    sampleFiles.js        builds the tiny sample PDFs and PNGs in code
+    __tests__/            unit tests
+e2e/                      Playwright browser and accessibility tests
+.github/workflows/        CI and GitHub Pages deployment
+documentation.html        this file</code></pre>
+    </section>
+
+    <section id="data">
+      <h2>How data is stored</h2>
+      <p>Everything is stored in the browser's <strong>IndexedDB</strong> database <code>easy-notes</code>:</p>
+      <div class="table" tabindex="0"><table>
+        <thead><tr><th>Store</th><th>Contents</th></tr></thead>
+        <tbody>
+          <tr><td><code>folders</code></td><td><code>{ id, name, kind: "note" | "doc", parentId, createdAt, deletedAt? }</code></td></tr>
+          <tr><td><code>notes</code></td><td><code>{ id, title, body, pinned, folderId, createdAt, updatedAt, deletedAt? }</code></td></tr>
+          <tr><td><code>docs</code></td><td><code>{ id, name, type, size, pinned, folderId, createdAt, deletedAt? }</code></td></tr>
+          <tr><td><code>files</code></td><td>The PDF / image file of each document, keyed by the document's <code>id</code>.</td></tr>
+        </tbody>
+      </table></div>
+      <ul>
+        <li>Only records that changed are written. Each batch of changes is also kept in a small journal in
+          <code>localStorage</code> until IndexedDB confirms it, so closing the app while typing never loses text.</li>
+        <li>Items in the Trash keep a <code>deletedAt</code> time and are removed for good after 30 days.</li>
+        <li>Small settings (name entered on the Welcome screen, theme, last backup time) are in <code>localStorage</code>
+          with the prefix <code>easy_notes_</code>.</li>
+        <li><strong>Backups</strong> are JSON files (<code>"app": "easy-notes"</code>, <code>"version"</code>) with all
+          records; documents are included as base64 data URLs. Restoring validates every record and only accepts PDFs and images.</li>
+      </ul>
+      <p class="note">Browsers may clear website data (for example when a phone runs out of space).
+        Tell your users to use <strong>Settings → Download backup</strong> regularly; the app also asks the browser for
+        persistent storage.</p>
+    </section>
+
+    <section id="name">
+      <h2>Change the app name</h2>
+      <p>Search the project for <code>Easy Notes</code> and replace it. The places users see are:</p>
+      <ul>
+        <li><code>index.html</code> — <code>&lt;title&gt;</code>, <code>apple-mobile-web-app-title</code> and the start-up error text.</li>
+        <li><code>vite.config.js</code> — <code>manifest.name</code>, <code>short_name</code> (max ~12 characters, shown under the home-screen icon) and <code>description</code>.</li>
+        <li><code>src/screens/Welcome.jsx</code> and <code>src/screens/Home.jsx</code> — the heading.</li>
+        <li><code>src/screens/LoadingScreen.jsx</code>, <code>src/screens/Settings.jsx</code>, <code>src/lib/backup.js</code> — messages.</li>
+        <li><code>package.json</code> — <code>name</code> (lowercase, no spaces).</li>
+      </ul>
+      <p class="note">Do <strong>not</strong> change <code>DB_NAME</code> in <code>src/lib/db.js</code>, the
+        <code>easy_notes_</code> keys or <code>APP</code> in <code>backup.js</code> after people have started using your
+        app — their existing data and backups would no longer be found. For a brand-new app you can rename them freely.</p>
+    </section>
+
+    <section id="colours">
+      <h2>Colours &amp; fonts</h2>
+      <p>The design uses Tailwind's built-in palettes: <code>indigo</code> for the brand colour and <code>slate</code> for
+        text, backgrounds and borders (with <code>amber</code> for folders and pins, <code>rose</code> for delete actions).</p>
+      <h3>Change the brand colour in one place</h3>
+      <p>In Tailwind 4 you can redefine a palette in <code>src/index.css</code>. For example, to turn the indigo accent green:</p>
+<pre tabindex="0"><code>@theme {
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --color-indigo-50:  #ecfdf5;
+  --color-indigo-100: #d1fae5;
+  --color-indigo-300: #6ee7b7;
+  --color-indigo-400: #34d399;
+  --color-indigo-500: #10b981;
+  --color-indigo-600: #047857;
+  --color-indigo-700: #065f46;
+}</code></pre>
+      <p>Then also update <code>theme_color</code> in <code>vite.config.js</code> and the button colour in the start-up
+        fallback in <code>index.html</code>. Keep text contrast at 4.5:1 or more (run <code>npm run test:e2e</code>; the
+        accessibility tests check this in light and dark mode).</p>
+      <h3>Dark mode</h3>
+      <p>Dark mode uses a <code>.dark</code> class on <code>&lt;html&gt;</code> (see <code>@custom-variant dark</code> in
+        <code>index.css</code>). Every colour has a <code>dark:</code> variant next to it in the components.</p>
+      <h3>Font</h3>
+      <p>Inter is bundled with the app through <code>@fontsource-variable/inter</code> (no Google Fonts request). To use
+        another font, install its Fontsource package, import it in <code>src/main.jsx</code> and change <code>--font-sans</code>.</p>
+    </section>
+
+    <section id="icons">
+      <h2>Icons &amp; PWA manifest</h2>
+      <ul>
+        <li><strong>App icons</strong> are in <code>public/</code>: <code>icon.svg</code> (browser tab),
+          <code>icon-192.png</code>, <code>icon-512.png</code>, <code>icon-maskable-512.png</code> (Android, with safe
+          padding) and <code>apple-touch-icon.png</code> (180×180, iPhone/iPad). Replace them with files of the same names and sizes.</li>
+        <li><strong>Manifest</strong> (name, colours, icons, start URL) is set in <code>vite.config.js</code> under
+          <code>VitePWA({ manifest })</code>. <code>start_url</code> and <code>scope</code> are <code>./</code> so the app
+          works in a sub-folder (like GitHub Pages).</li>
+        <li><strong>Interface icons</strong> come from <a href="https://lucide.dev/">lucide-react</a>; import any other
+          icon by name, e.g. <code>import { Star } from "lucide-react"</code>.</li>
+        <li><strong>Updates</strong>: the service worker updates automatically; <code>UpdateNotifier</code> tells the user when a new version is ready.</li>
+      </ul>
+    </section>
+
+    <section id="sample">
+      <h2>Sample data</h2>
+      <p>“Try with sample data” (Welcome screen) and “Load sample data” (Settings) add fictional folders, nine notes and
+        six small documents. The PDFs and PNGs are generated in code (<code>src/lib/sampleFiles.js</code>), so no extra files
+        ship with the app. Sample items are normal items: they can be edited, moved, deleted, backed up and restored.
+        Edit <code>src/lib/sampleData.js</code> to change the content. “Delete all data” in Settings removes everything,
+        including the Trash, after a confirmation.</p>
+    </section>
+
+    <section id="deploy">
+      <h2>Deploy</h2>
+      <p>Run <code>npm run build</code> and upload the contents of <code>dist/</code> to any static host — Netlify,
+        Vercel, Cloudflare Pages, GitHub Pages, Firebase Hosting or a normal web server. No server configuration is
+        needed: the app uses relative paths and hash URLs (<code>#/notes</code>), so it works at the root of a domain or in a sub-folder.</p>
+      <p class="note">Serve the site over <strong>HTTPS</strong> (or <code>localhost</code>). Browsers only enable the
+        service worker, offline mode and “install app” on secure origins.</p>
+      <h3>GitHub Pages (included)</h3>
+      <ol>
+        <li>Push the project to a GitHub repository.</li>
+        <li>In the repository open <strong>Settings → Pages</strong> and set <strong>Source</strong> to <strong>GitHub Actions</strong>.</li>
+        <li>Every push to <code>main</code> runs <code>.github/workflows/deploy.yml</code>: it runs lint, unit tests and the
+          build, then publishes <code>dist/</code>. The address is shown in the workflow run, usually
+          <code>https://&lt;user&gt;.github.io/&lt;repository&gt;/</code>.</li>
+      </ol>
+      <p><code>.github/workflows/ci.yml</code> runs the same checks plus the Playwright browser tests on every pull request.</p>
+    </section>
+
+    <section id="backend">
+      <h2>Connect a backend (optional)</h2>
+      <p>The app works fully without a server. If you later want accounts or sync between devices, all storage goes through
+        a small set of functions in <code>src/lib/db.js</code>:</p>
+      <div class="table" tabindex="0"><table>
+        <thead><tr><th>Function</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>loadAll()</code></td><td>Returns <code>{ notes, docs, folders }</code> at start-up.</td></tr>
+          <tr><td><code>writeChanges(changes)</code></td><td>Saves changed records: <code>{ notes: { put: [], del: [] }, docs: …, folders: … }</code>.</td></tr>
+          <tr><td><code>putFile(id, blob)</code> / <code>getFile(id)</code> / <code>deleteFile(id)</code></td><td>Stores, reads and deletes a document's file.</td></tr>
+        </tbody>
+      </table></div>
+      <p>A simple path is to keep IndexedDB as the local copy and add a sync step, or to implement the same functions with
+        <code>fetch()</code> calls to your API (for example a REST API, Supabase or Firebase). Things to add when you do this:</p>
+      <ul>
+        <li>User sign-in, and server-side checks so each user can only read and write their own records.</li>
+        <li>File uploads to object storage with size and type limits (the app allows PDFs and images up to 25 MB).</li>
+        <li>An <code>updatedAt</code> on every record so you can resolve edits made on two devices.</li>
+        <li>Update the privacy text on the Welcome screen, which currently says data stays on the device.</li>
+      </ul>
+    </section>
+
+    <section id="browsers">
+      <h2>Browser support</h2>
+      <p>Current versions of Chrome, Edge, Firefox and Safari on desktop, Android and iOS / iPadOS. Tailwind CSS 4 needs
+        roughly <strong>Chrome / Edge 111+, Safari 16.4+ and Firefox 128+</strong>. The app is tested automatically in
+        Chromium, Firefox and WebKit (Safari's engine).</p>
+      <p class="muted">In private / incognito windows browsers keep data only until the window is closed. Safari's private mode
+        doesn't allow files in IndexedDB, so the app stores document bytes in a compatible format there automatically.</p>
+    </section>
+
+    <section id="tests">
+      <h2>Tests</h2>
+      <ul>
+        <li><strong>Unit tests</strong> (<code>src/lib/__tests__</code>, Vitest): storage, persistence journal, folders,
+          Trash, backup format, sample data and delete-all.</li>
+        <li><strong>Browser tests</strong> (<code>e2e/</code>, Playwright): the full user journey (sample data, notes,
+          documents, PDF preview, move, delete / undo, Trash, backup, delete all, restore, dark mode, offline), keyboard focus, and
+          axe-core accessibility checks on every screen and dialog in light and dark mode at 360–1440 px wide.</li>
+      </ul>
+    </section>
+
+    <section id="credits">
+      <h2>Credits &amp; licences</h2>
+      <p>Easy Notes uses these open-source packages. Their licences allow use in commercial products; keep their licence
+        notices (they are included in <code>node_modules/&lt;package&gt;/LICENSE</code>).</p>
+      <div class="table" tabindex="0"><table>
+        <thead><tr><th>Package</th><th>Used for</th><th>Licence</th></tr></thead>
+        <tbody>
+          <tr><td>React, React DOM</td><td>User interface</td><td>MIT</td></tr>
+          <tr><td>pdf.js (pdfjs-dist)</td><td>PDF preview</td><td>Apache-2.0</td></tr>
+          <tr><td>Lucide (lucide-react)</td><td>Icons</td><td>ISC</td></tr>
+          <tr><td>Inter (@fontsource-variable/inter)</td><td>Font</td><td>SIL Open Font License 1.1</td></tr>
+          <tr><td>Workbox (via vite-plugin-pwa)</td><td>Service worker / offline</td><td>MIT</td></tr>
+          <tr><td>Vite, Tailwind CSS, vite-plugin-pwa</td><td>Build tools (not shipped as code)</td><td>MIT</td></tr>
+          <tr><td>Vitest, Playwright, axe-core, ESLint</td><td>Testing (development only)</td><td>MIT / Apache-2.0 / MPL-2.0 / MIT</td></tr>
+        </tbody>
+      </table></div>
+      <p>The sample notes, names, companies and documents are made up.</p>
+    </section>
+
+    <section id="changelog">
+      <h2>Changelog</h2>
+      <h3>1.0.0 — first release</h3>
+      <ul>
+        <li>Notes and documents in folders and sub-folders, with search, sort, filters and pins.</li>
+        <li>PDF and image preview; upload or take a photo.</li>
+        <li>Trash with 30-day restore and Undo; backup and restore to a single file.</li>
+        <li>Sample data (Welcome screen and Settings) and “Delete all data”.</li>
+        <li>Offline support, installable PWA, light and dark mode.</li>
+        <li>Accessibility pass: colour contrast, headings, visible keyboard focus, labelled buttons.</li>
+        <li>Unit tests, Playwright tests in three browsers, CI and GitHub Pages deployment.</li>
+      </ul>
+    </section>
+
+    <section id="support">
+      <h2>Support</h2>
+      <p>Please contact the author through the marketplace item page. Include your browser, device and the steps that
+        cause the problem. Licence terms are in <code>LICENSE.txt</code>.</p>
+    </section>
+  </main>
+</div>
+
+<footer>Easy Notes 1.0.0 · © 2026 Muhammad Hanif</footer>
+
+<script>
+  // Light / dark switch for this page only (remembers the choice when storage is available).
+  (function () {
+    var root = document.documentElement;
+    var button = document.getElementById("theme");
+    var stored = null;
+    try { stored = localStorage.getItem("easy_notes_docs_theme"); } catch (e) {}
+    if (stored) root.setAttribute("data-theme", stored);
+    function isDark() {
+      var t = root.getAttribute("data-theme");
+      return t ? t === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    }
+    function label() { button.textContent = isDark() ? "Light mode" : "Dark mode"; }
+    button.addEventListener("click", function () {
+      var next = isDark() ? "light" : "dark";
+      root.setAttribute("data-theme", next);
+      try { localStorage.setItem("easy_notes_docs_theme", next); } catch (e) {}
+      label();
+    });
+    label();
+  })();
+</script>
+</body>
+</html>

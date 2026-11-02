@@ -3,11 +3,13 @@ import {
   ArrowLeft,
   ChevronRight,
   Download,
+  Eraser,
   HardDrive,
   Moon,
   Share,
   ShieldCheck,
   Smartphone,
+  Sparkles,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -29,6 +31,8 @@ export function Settings({ data, trashCount, theme, lastBackup, actions }) {
   const restoreInput = useRef(null);
   const [busy, setBusy] = useState(false);
   const [restoring, setRestoring] = useState(null); // { summary, apply }
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+  const [loadingSample, setLoadingSample] = useState(false);
   const [storage, setStorage] = useState({ usage: null, persisted: false });
   const [installable, setInstallable] = useState(canInstall);
 
@@ -58,6 +62,12 @@ export function Settings({ data, trashCount, theme, lastBackup, actions }) {
     const ok = await requestPersistentStorage();
     setStorage(await storageStatus());
     toast(ok ? "Your data is protected" : "Your browser didn't allow this. Installing the app helps.");
+  };
+
+  const loadSample = async () => {
+    setLoadingSample(true);
+    await actions.loadSampleData();
+    setLoadingSample(false);
   };
 
   const summary = restoring?.summary;
@@ -208,7 +218,44 @@ export function Settings({ data, trashCount, theme, lastBackup, actions }) {
           </div>
         </section>
 
+        {/* Sample data & reset */}
+        <section>
+          <h2 className={heading}>Data</h2>
+          <div className={card}>
+            <button type="button" onClick={loadSample} disabled={loadingSample} className={rowButton}>
+              <Sparkles className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+              <span className="flex-1">
+                {loadingSample ? "Adding sample data…" : "Load sample data"}
+                <span className="block text-xs font-normal text-slate-500 dark:text-slate-400">
+                  Adds example folders, notes and documents. Your own data is kept.
+                </span>
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmDeleteAll(true)}
+              className={`${row} font-medium text-rose-700 transition hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-500/10`}
+            >
+              <Eraser className="h-5 w-5" />
+              <span className="flex-1">
+                Delete all data
+                <span className="block text-xs font-normal text-slate-500 dark:text-slate-400">
+                  Removes every folder, note and document, including the Trash
+                </span>
+              </span>
+            </button>
+          </div>
+        </section>
       </main>
+
+      <ConfirmDialog
+        open={confirmDeleteAll}
+        onClose={() => setConfirmDeleteAll(false)}
+        title="Delete all data?"
+        message={`This permanently removes ${data.folders.length} folders, ${data.notes.length} notes, ${data.docs.length} documents and everything in the Trash from this device. It can't be undone — download a backup first if you might need them.`}
+        confirmLabel="Delete everything"
+        onConfirm={actions.deleteAll}
+      />
 
       <ConfirmDialog
         open={!!restoring}

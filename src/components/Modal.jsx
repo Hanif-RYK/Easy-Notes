@@ -1,5 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
+import { setOpenModals } from "../lib/modalStack.js";
 
 /**
  * Accessible overlay. `variant="sheet"` slides up from the bottom on phones
@@ -17,12 +18,14 @@ export function Modal({ open, onClose, title, variant = "sheet", children }) {
 
   useEffect(() => {
     if (!open) return;
+    setOpenModals(1);
     const previous = document.activeElement;
     const onKey = (e) => e.key === "Escape" && onCloseRef.current();
     document.addEventListener("keydown", onKey);
     // Move focus into the panel unless a child (e.g. an input) already took it.
     if (!panelRef.current?.contains(document.activeElement)) panelRef.current?.focus();
     return () => {
+      setOpenModals(-1);
       document.removeEventListener("keydown", onKey);
       if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
     };

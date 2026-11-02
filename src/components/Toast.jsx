@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useAnyModalOpen } from "../lib/modalStack.js";
 
 const ToastContext = createContext(() => {});
 
@@ -9,6 +10,8 @@ const ToastContext = createContext(() => {});
 export function ToastProvider({ children }) {
   const [toast, setToast] = useState(null);
   const timer = useRef();
+  // Never cover an open sheet or dialog: show the toast at the top instead.
+  const modalOpen = useAnyModalOpen();
 
   const show = useCallback((message, action) => {
     clearTimeout(timer.current);
@@ -23,7 +26,9 @@ export function ToastProvider({ children }) {
       {children}
       <div
         aria-live="polite"
-        className="pointer-events-none fixed inset-x-0 bottom-24 z-[60] flex justify-center px-4 print:hidden"
+        className={`pointer-events-none fixed inset-x-0 z-[60] flex justify-center px-4 print:hidden ${
+          modalOpen ? "top-[max(1rem,env(safe-area-inset-top))]" : "bottom-24"
+        }`}
       >
         {toast && (
           <div

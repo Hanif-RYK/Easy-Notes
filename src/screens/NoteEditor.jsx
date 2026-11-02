@@ -125,6 +125,7 @@ function Editor({ id, note, actions }) {
         </header>
 
         <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-5 pt-5 pb-16 sm:px-8">
+          <h1 className="sr-only">{isNew ? "New note" : `Edit note: ${title.trim() || "Untitled"}`}</h1>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -138,7 +139,7 @@ function Editor({ id, note, actions }) {
             aria-label="Note title"
             maxLength={150}
             autoFocus={isNew}
-            className="w-full bg-transparent text-2xl font-bold tracking-tight text-slate-900 outline-none placeholder:text-slate-500 focus-visible:outline-none dark:text-white dark:placeholder:text-slate-500 dark:text-slate-400"
+            className="-mx-2 w-[calc(100%+1rem)] rounded-lg bg-transparent px-2 text-2xl font-bold tracking-tight text-slate-900 outline-none placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 dark:text-white dark:placeholder:text-slate-400"
           />
           {note && (
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Edited {formatDate(note.updatedAt)}</p>
@@ -149,7 +150,7 @@ function Editor({ id, note, actions }) {
             onChange={(e) => setBody(e.target.value)}
             placeholder="Start writing…"
             aria-label="Note text"
-            className="mt-4 min-h-[60dvh] w-full flex-1 resize-none bg-transparent text-base leading-relaxed text-slate-700 outline-none [field-sizing:content] placeholder:text-slate-500 focus-visible:outline-none dark:text-slate-200 dark:placeholder:text-slate-500 dark:text-slate-400"
+            className="-mx-2 mt-4 min-h-[60dvh] w-[calc(100%+1rem)] flex-1 resize-none rounded-lg bg-transparent px-2 text-base leading-relaxed text-slate-700 outline-none [field-sizing:content] placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 dark:text-slate-200 dark:placeholder:text-slate-400"
           />
         </main>
       </div>

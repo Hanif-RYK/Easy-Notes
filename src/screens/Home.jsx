@@ -112,6 +112,7 @@ export function Home({ tab, folder, notes, docs, folders, lastBackup, actions })
   const leaveFolder = () => goBack(folder?.parentId ? `${tab}/${folder.parentId}` : tab);
 
   const onFilesPicked = (e) => {
+    setSheet(null); // the "Create new" sheet must not stay open behind the toast
     actions.addFiles(e.target.files, folderId);
     e.target.value = ""; // allow picking the same file again
   };
@@ -343,7 +344,7 @@ export function Home({ tab, folder, notes, docs, folders, lastBackup, actions })
                 className={`flex-1 rounded-lg py-2 text-sm font-semibold transition ${
                   tab === t.id
                     ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white"
-                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
                 }`}
               >
                 {t.label}
@@ -405,13 +406,13 @@ export function Home({ tab, folder, notes, docs, folders, lastBackup, actions })
           <div className="space-y-6">
             {visibleFolders.length > 0 && (
               <section>
-                <h3 className={sectionTitle}>Folders</h3>
+                <h2 className={sectionTitle}>Folders</h2>
                 <ul className="space-y-2">{visibleFolders.map(renderFolder)}</ul>
               </section>
             )}
             {pinned.length > 0 && (
               <section>
-                <h3 className={sectionTitle}>Pinned</h3>
+                <h2 className={sectionTitle}>Pinned</h2>
                 <ul className="space-y-2">{pinned.map(renderItem)}</ul>
               </section>
             )}

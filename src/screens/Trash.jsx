@@ -33,7 +33,7 @@ export function Trash({ data, actions }) {
             <button
               type="button"
               onClick={() => setConfirm("all")}
-              className="rounded-lg px-3 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
+              className="rounded-lg px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-500/10"
             >
               Empty Trash
             </button>
